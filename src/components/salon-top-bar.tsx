@@ -1,3 +1,5 @@
+import { buildTelHref } from "@/lib/tel-href";
+
 type Props = {
   address: string;
   email: string;
@@ -6,7 +8,7 @@ type Props = {
 };
 
 export function SalonTopBar({ address, email, phone, hoursLine }: Props) {
-  const tel = phone.replaceAll(/\D/g, "");
+  const telHref = buildTelHref(phone);
   return (
     <div className="border-b border-zinc-200/60 bg-zinc-900 text-[11px] text-zinc-200 sm:text-xs">
       <div className="mx-auto max-w-6xl px-4 py-1.5 sm:px-6 sm:py-2">
@@ -22,7 +24,7 @@ export function SalonTopBar({ address, email, phone, hoursLine }: Props) {
               {email}
             </a>
             <a
-              href={tel ? `tel:+853${tel}` : `tel:${phone}`}
+              href={telHref}
               className="shrink-0 text-zinc-200 underline-offset-2 transition hover:text-white hover:underline"
             >
               {phone}

@@ -23,3 +23,25 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Focus-only skip link (WCAG 2.4.1) */
+.skip-to-main {
+  position: absolute;
+  left: 0.75rem;
+  top: 0.75rem;
+  z-index: 100;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  background: #18181b;
+  color: #fafafa;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transform: translateY(-200%);
+  transition: transform 0.15s ease;
+}
+.skip-to-main:focus {
+  transform: translateY(0);
+  outline: 2px solid #d4d4d8;
+  outline-offset: 2px;
+}

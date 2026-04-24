@@ -1,3 +1,5 @@
+import { buildTelHref } from "@/lib/tel-href";
+
 type FooterProps = {
   displayClassName: string;
   sansClassName: string;
@@ -17,7 +19,7 @@ type FooterProps = {
 };
 
 export function SiteFooter(p: FooterProps) {
-  const tel = p.phone.replaceAll(/\D/g, "");
+  const telHref = buildTelHref(p.phone);
   const hasWhatsapp = Boolean(p.whatsappUrl);
   return (
     <footer
@@ -48,7 +50,7 @@ export function SiteFooter(p: FooterProps) {
             <h3 className="mt-4 text-sm font-semibold text-zinc-500">{p.phoneLabel}</h3>
             <a
               className="mt-1 block text-sm text-zinc-800 underline decoration-zinc-300 underline-offset-2 transition hover:decoration-zinc-500"
-              href={tel ? `tel:+853${tel}` : `tel:${p.phone}`}
+              href={telHref}
             >
               {p.phone}
             </a>

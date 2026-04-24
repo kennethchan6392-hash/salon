@@ -11,6 +11,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { WhatsAppFloat } from "@/components/whatsapp-float";
 import { getMessages, isSupportedLocale, supportedLocales } from "@/lib/i18n";
 import { getHomeProducts, getHomeSlotsForService } from "@/lib/home-data";
+import { phoneToE164 } from "@/lib/tel-href";
 
 /** Prebuild both locales; required for `output: 'export'` (GitHub Pages) and static HTML at deploy. */
 export function generateStaticParams() {
@@ -36,6 +37,10 @@ type HomePageProps = {
 const defaultService = "haircut";
 const businessSite = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
+/** Hero-style image for link previews (same scene as landing; absolute URL for crawlers). */
+const ogImageUrl =
+  "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1200&h=630&q=80";
+
 export async function generateMetadata({ params }: HomePageProps): Promise<Metadata> {
   const { locale } = await params;
   if (!isSupportedLocale(locale)) {
@@ -51,6 +56,20 @@ export async function generateMetadata({ params }: HomePageProps): Promise<Metad
       description: t.brandSubtitle,
       url: `${businessSite}${path}`,
       siteName: "n_nsalon",
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: t.brandTitle,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: t.brandName,
+      description: t.brandSubtitle,
+      images: [ogImageUrl],
     },
     alternates: {
       canonical: `${businessSite}${path}`,
@@ -107,7 +126,7 @@ export default async function LocaleHomePage({ params }: HomePageProps) {
       addressLocality: "Macau",
       addressCountry: "MO",
     },
-    telephone: t.phone,
+    telephone: phoneToE164(t.phone),
     url: businessSite,
     sameAs: sameAs.length > 0 ? sameAs : undefined,
     areaServed: { "@type": "Place", name: "Macau" },
@@ -116,9 +135,13 @@ export default async function LocaleHomePage({ params }: HomePageProps) {
   const displayName = display.className;
   const sansName = sans.className;
 
+  const bookingNoSlotsHint = t.bookingNoSlotsLine.replace("{phone}", t.phone);
+
   return (
     <div
-      className={`min-h-screen bg-zinc-50 text-zinc-900 ${display.variable} ${sans.variable} [font-family:var(--font-sans-body),ui-sans-serif,system-ui,sans-serif]`}
+      id="main-content"
+      tabIndex={-1}
+      className={`min-h-screen bg-zinc-50 text-zinc-900 ${display.variable} ${sans.variable} [font-family:var(--font-sans-body),ui-sans-serif,system-ui,sans-serif]${whatsappUrl ? " pb-28 [padding-bottom:max(7rem,env(safe-area-inset-bottom,0px))] sm:pb-32" : ""}`}
     >
       <script
         type="application/ld+json"
@@ -206,6 +229,7 @@ export default async function LocaleHomePage({ params }: HomePageProps) {
               locale={locale}
               initialSlots={initialSlots}
               defaultServiceId={defaultService}
+              noSlotsHint={bookingNoSlotsHint}
             />
           </div>
         </section>

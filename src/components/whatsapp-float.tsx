@@ -36,7 +36,7 @@ export function WhatsAppFloat({ href, title, body, sansClassName }: Props) {
         href={href}
         target="_blank"
         rel="noreferrer"
-        className="order-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg transition hover:scale-105 hover:shadow-xl focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-amber-800"
+        className="order-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg transition hover:scale-105 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white/95 focus-visible:ring-offset-2"
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
         onClick={() => setOpen((o) => !o)}

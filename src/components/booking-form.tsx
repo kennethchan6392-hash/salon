@@ -11,6 +11,8 @@ type BookingFormProps = {
   locale: string;
   initialSlots: Slot[];
   defaultServiceId: string;
+  /** Shown when there are no bookable slots (e.g. DB empty or all full). */
+  noSlotsHint: string;
 };
 
 const services = [
@@ -35,7 +37,7 @@ function isValidPhoneDigits(phone: string) {
   return d.length >= 6 && d.length <= 15;
 }
 
-export function BookingForm({ locale, initialSlots, defaultServiceId }: BookingFormProps) {
+export function BookingForm({ locale, initialSlots, defaultServiceId, noSlotsHint }: BookingFormProps) {
   const [selectedService, setSelectedService] = useState(defaultServiceId);
   const [selectedSlot, setSelectedSlot] = useState(initialSlots[0]?.id ?? "");
   const [slots, setSlots] = useState<Slot[]>(initialSlots);
@@ -123,6 +125,7 @@ export function BookingForm({ locale, initialSlots, defaultServiceId }: BookingF
           className="rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-2"
           value={selectedSlot}
           onChange={(event) => setSelectedSlot(event.target.value)}
+          aria-invalid={slots.length === 0}
         >
           {slots.map((slot) => (
             <option key={slot.id} value={slot.id}>
@@ -130,6 +133,11 @@ export function BookingForm({ locale, initialSlots, defaultServiceId }: BookingF
             </option>
           ))}
         </select>
+        {slots.length === 0 ? (
+          <p className="text-sm leading-relaxed text-amber-200/90" role="status">
+            {noSlotsHint}
+          </p>
+        ) : null}
       </label>
       <label className="flex flex-col gap-2 text-sm">
         <span>Name</span>

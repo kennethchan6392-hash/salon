@@ -320,9 +320,10 @@ export function ShopCheckout({ locale, initialProducts }: ShopCheckoutProps) {
       </div>
 
       {n === 0 ? (
-        <p className="mt-10 py-12 text-center text-sm text-neutral-500">
-          {message || t.shopNoProducts}
-        </p>
+        <div className="mt-10 space-y-3 py-12 text-center">
+          <p className="text-sm text-neutral-600">{message || t.shopNoProducts}</p>
+          <p className="text-sm text-neutral-500">{t.shopEmptyCta}</p>
+        </div>
       ) : (
         <ul className="mt-10 grid list-none grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {sortedProducts.map((product) => (
