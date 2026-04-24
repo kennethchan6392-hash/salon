@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Service {
+  id           String        @id @default(cuid())
+  key          String        @unique
+  nameZh       String
+  nameEn       String
+  durationMins Int
+  basePrice    Int
+  isActive     Boolean       @default(true)
+  appointments Appointment[]
+}
+
+model AvailabilitySlot {
+  id           String        @id @default(cuid())
+  serviceKey   String
+  startsAt     DateTime
+  endsAt       DateTime
+  capacity     Int           @default(1)
+  remaining    Int           @default(1)
+  status       SlotStatus    @default(open)
+  appointments Appointment[]
+}
+
+model Appointment {
+  id            String             @id @default(cuid())
+  serviceId     String
+  slotId        String
+  customerName  String
+  customerPhone String
+  status        AppointmentStatus  @default(pending)
+  note          String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  service Service?          @relation(fields: [serviceId], references: [key])
+  slot    AvailabilitySlot? @relation(fields: [slotId], references: [id])
+
+  @@index([slotId])
+  @@index([serviceId])
+}
+
+enum AppointmentStatus {
+  pending
+  confirmed
+  completed
+  cancelled
+  no_show
+}
+
+enum SlotStatus {
+  open
+  blocked
+  full
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  nameZh      String
+  nameEn      String
+  description String?
+  priceCents  Int
+  currency    String      @default("hkd")
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  orderItems  OrderItem[]
+}
+
+model Order {
+  id                String       @id @default(cuid())
+  customerName      String
+  customerEmail     String
+  totalAmountCents  Int
+  currency          String       @default("hkd")
+  status            OrderStatus  @default(pending)
+  paymentMethod     PaymentMethod @default(stripe_card)
+  paymentAccount    String?
+  paymentNote       String?
+  paymentProofUrl   String?
+  paymentUploadToken String?     @unique
+  paymentProofStorageKey String?
+  receiptNumber     String?      @unique
+  paidAt            DateTime?
+  stripeSessionId   String?      @unique
+  stripePaymentId   String?
+  lastStatusNote    String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  items             OrderItem[]
+}
+
+model ReceiptCounter {
+  id         String   @id @default(cuid())
+  year       Int      @unique
+  nextNumber Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model OrderItem {
+  id              String  @id @default(cuid())
+  orderId         String
+  productId       String
+  quantity        Int     @default(1)
+  unitPriceCents  Int
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+enum OrderStatus {
+  pending
+  proof_submitted
+  paid
+  failed
+  cancelled
+}
+
+enum PaymentMethod {
+  mpay
+  boc
+  uepay
+  bank_transfer
+  stripe_card
+}
+
+model IdempotencyRecord {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  route     String
+  status    Int
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+}

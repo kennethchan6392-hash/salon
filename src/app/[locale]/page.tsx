@@ -1,0 +1,281 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { Playfair_Display, DM_Sans } from "next/font/google";
+import { BookingForm } from "@/components/booking-form";
+import { ShopCheckout } from "@/components/shop-checkout";
+import { HeroSalon } from "@/components/hero-salon";
+import { SalonTopBar } from "@/components/salon-top-bar";
+import { SalonHeader } from "@/components/salon-header";
+import { ShopPromoBanner } from "@/components/shop-promo-banner";
+import { SiteFooter } from "@/components/site-footer";
+import { WhatsAppFloat } from "@/components/whatsapp-float";
+import { getMessages, isSupportedLocale } from "@/lib/i18n";
+import { getHomeProducts, getHomeSlotsForService } from "@/lib/home-data";
+
+export const dynamic = "force-dynamic";
+
+const display = Playfair_Display({
+  weight: ["500", "600", "700"],
+  subsets: ["latin"],
+  variable: "--font-display",
+});
+
+const sans = DM_Sans({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+  variable: "--font-sans-body",
+});
+
+type HomePageProps = {
+  params: Promise<{ locale: string }>;
+};
+
+const defaultService = "haircut";
+const businessSite = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+export async function generateMetadata({ params }: HomePageProps): Promise<Metadata> {
+  const { locale } = await params;
+  if (!isSupportedLocale(locale)) {
+    return {};
+  }
+  const t = getMessages(locale);
+  const path = `/${locale}`;
+  return {
+    title: t.brandName,
+    description: t.brandSubtitle,
+    openGraph: {
+      title: t.brandName,
+      description: t.brandSubtitle,
+      url: `${businessSite}${path}`,
+      siteName: "n_nsalon",
+    },
+    alternates: {
+      canonical: `${businessSite}${path}`,
+      languages: {
+        "zh-HK": `${businessSite}/zh-HK`,
+        en: `${businessSite}/en`,
+        "x-default": `${businessSite}/zh-HK`,
+      },
+    },
+  };
+}
+
+export default async function LocaleHomePage({ params }: HomePageProps) {
+  const { locale } = await params;
+
+  if (!isSupportedLocale(locale)) {
+    notFound();
+  }
+
+  const t = getMessages(locale);
+  const [initialProducts, initialSlots] = await Promise.all([
+    getHomeProducts(),
+    getHomeSlotsForService(defaultService),
+  ]);
+
+  const sameAs: string[] = [];
+  if (process.env.NEXT_PUBLIC_INSTAGRAM_URL) {
+    sameAs.push(process.env.NEXT_PUBLIC_INSTAGRAM_URL);
+  }
+
+  const displayEmail = process.env.NEXT_PUBLIC_SALON_EMAIL?.trim() || t.displayEmail;
+  const whatsappUrl: string | null = (() => {
+    if (process.env.NEXT_PUBLIC_WHATSAPP_URL) {
+      return process.env.NEXT_PUBLIC_WHATSAPP_URL;
+    }
+    const raw = process.env.NEXT_PUBLIC_WHATSAPP_PHONE?.replace(/\D/g, "");
+    if (!raw) {
+      return null;
+    }
+    const withCc = raw.startsWith("853") ? raw : `853${raw.replace(/^0+/, "")}`;
+    return `https://wa.me/${withCc}`;
+  })();
+
+  const waDisplay =
+    process.env.NEXT_PUBLIC_WHATSAPP_PHONE?.replace(/\s/g, "")?.trim() || `+853 ${t.phone}`;
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "HairSalon",
+    name: locale === "zh-HK" ? t.brandName : "n_nsalon (藝能美髮培訓中心)",
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: t.address,
+      addressLocality: "Macau",
+      addressCountry: "MO",
+    },
+    telephone: t.phone,
+    url: businessSite,
+    sameAs: sameAs.length > 0 ? sameAs : undefined,
+    areaServed: { "@type": "Place", name: "Macau" },
+  };
+
+  const displayName = display.className;
+  const sansName = sans.className;
+
+  return (
+    <div
+      className={`min-h-screen bg-zinc-50 text-zinc-900 ${display.variable} ${sans.variable} [font-family:var(--font-sans-body),ui-sans-serif,system-ui,sans-serif]`}
+    >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <SalonTopBar
+        address={t.address}
+        email={displayEmail}
+        phone={t.phone}
+        hoursLine={t.topBarHoursLine}
+      />
+      <SalonHeader
+        brandName={t.brandName}
+        home={t.navHome}
+        priceList={t.navPriceList}
+        ourTeam={t.navOurTeam}
+        contact={t.navContact}
+        shop={t.navShop}
+        searchAria={t.searchAria}
+        cartAria={t.cartAria}
+        cartEmpty={t.cartEmpty}
+        locale={locale}
+        cartCount={0}
+      />
+      <main>
+        <HeroSalon
+          brandTitle={t.brandTitle}
+          brandSubtitle={t.brandSubtitle}
+          kw1={t.heroKwHairCare}
+          kw2={t.heroKwSkillful}
+          kw3={t.heroKwSince}
+          bookNow={t.bookNow}
+          shopNow={t.shopNow}
+          displayClassName={displayName}
+          sansClassName={sansName}
+        />
+
+        <section id="story" className="border-b border-zinc-200/80 bg-white">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+            <h2 className={`${displayName} text-3xl text-zinc-900 md:text-4xl`}>{t.storyTitle}</h2>
+            <p
+              className={`${sansName} mt-6 max-w-2xl whitespace-pre-line text-base leading-relaxed text-zinc-600`}
+            >
+              {t.storyBody}
+            </p>
+          </div>
+        </section>
+
+        <section id="services" className="border-b border-zinc-200/80">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+            <h2 className={`${displayName} text-3xl text-zinc-900 md:text-4xl`}>
+              {t.servicesSectionTitle}
+            </h2>
+            <div className="mt-12 grid gap-6 md:grid-cols-3">
+              {[
+                { title: t.serviceCutTitle, body: t.serviceCutBody },
+                { title: t.serviceTechTitle, body: t.serviceTechBody },
+                { title: t.serviceCareTitle, body: t.serviceCareBody },
+              ].map((item) => (
+                <div
+                  key={item.title}
+                  className="group border border-zinc-200/90 bg-white p-8 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-amber-200/80 hover:shadow-md"
+                >
+                  <h3 className={`${displayName} text-xl font-medium text-zinc-900`}>{item.title}</h3>
+                  <p className={`${sansName} mt-4 text-sm leading-relaxed text-zinc-600`}>
+                    {item.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <ShopPromoBanner
+          title={t.shopBannerTitle}
+          body={t.shopBannerBody}
+          cta={t.shopBannerCta}
+          sansClassName={sansName}
+        />
+
+        <section id="booking" className="border-b border-zinc-800/60 bg-zinc-950 text-zinc-100">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+            <h2 className={`${displayName} text-3xl text-white md:text-4xl`}>{t.bookingTitle}</h2>
+            <p className={`${sansName} mt-3 max-w-2xl text-zinc-400`}>{t.bookingFlow}</p>
+            <BookingForm
+              locale={locale}
+              initialSlots={initialSlots}
+              defaultServiceId={defaultService}
+            />
+          </div>
+        </section>
+
+        <section id="shop" className="border-b border-neutral-200/90 bg-white text-zinc-900">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+            <h2 className={`${displayName} text-3xl text-zinc-900 md:text-4xl`}>
+              {t.shopSectionTitle}
+            </h2>
+            <p className={`${sansName} mt-3 max-w-2xl text-sm text-zinc-500`}>
+              {t.shopSectionNote}
+            </p>
+            <ShopCheckout locale={locale} initialProducts={initialProducts} />
+          </div>
+        </section>
+
+        <section id="price-list" className="border-b border-zinc-200/80 bg-white">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+            <h2 className={`${displayName} text-3xl text-zinc-900 md:text-4xl`}>
+              {t.priceListTitle}
+            </h2>
+            <p className={`${sansName} mt-4 max-w-2xl text-zinc-600`}>{t.priceListBody}</p>
+          </div>
+        </section>
+
+        <section id="team" className="border-b border-zinc-200/80 bg-zinc-100/80">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+            <h2 className={`${displayName} text-3xl text-zinc-900 md:text-4xl`}>{t.teamTitle}</h2>
+            <p className={`${sansName} mt-4 max-w-2xl text-zinc-600`}>{t.teamBody}</p>
+            <div className="mt-10 grid gap-4 sm:grid-cols-3">
+              {["01", "02", "03"].map((k) => (
+                <div
+                  key={k}
+                  className="flex aspect-[4/3] flex-col items-center justify-center rounded-2xl border border-zinc-200/90 bg-white p-6 text-center shadow-sm"
+                >
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-200/80 text-sm font-medium text-zinc-600">
+                    n_nsalon
+                  </div>
+                  <p className={`${sansName} mt-4 text-sm text-zinc-500`}>
+                    {locale === "zh-HK" ? "造型師" : "Stylist"} · {k}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </main>
+      {whatsappUrl ? (
+        <WhatsAppFloat
+          href={whatsappUrl}
+          title={t.whatsappBubbleTitle}
+          body={t.whatsappBubbleBody}
+          sansClassName={sansName}
+        />
+      ) : null}
+      <SiteFooter
+        displayClassName={displayName}
+        sansClassName={sansName}
+        tagline={t.footerTagline}
+        addressLabel={t.contactAddressLabel}
+        phoneLabel={t.contactPhoneLabel}
+        emailLabel={t.contactEmailLabel}
+        whatsappLabel={t.contactWhatsappLabel}
+        address={t.address}
+        phone={t.phone}
+        email={displayEmail}
+        hoursTitle={t.hoursFooterTitle}
+        hoursDetail={t.hoursDetail}
+        whatsappUrl={whatsappUrl}
+        waDisplay={waDisplay}
+        navTitle={t.footerNavTitle}
+      />
+    </div>
+  );
+}
