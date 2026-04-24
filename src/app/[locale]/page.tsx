@@ -134,7 +134,6 @@ export default async function LocaleHomePage({ params }: HomePageProps) {
         brandName={t.brandName}
         home={t.navHome}
         priceList={t.navPriceList}
-        ourTeam={t.navOurTeam}
         contact={t.navContact}
         shop={t.navShop}
         searchAria={t.searchAria}
@@ -229,28 +228,6 @@ export default async function LocaleHomePage({ params }: HomePageProps) {
               {t.priceListTitle}
             </h2>
             <p className={`${sansName} mt-4 max-w-2xl text-zinc-600`}>{t.priceListBody}</p>
-          </div>
-        </section>
-
-        <section id="team" className="border-b border-zinc-200/80 bg-zinc-100/80">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-            <h2 className={`${displayName} text-3xl text-zinc-900 md:text-4xl`}>{t.teamTitle}</h2>
-            <p className={`${sansName} mt-4 max-w-2xl text-zinc-600`}>{t.teamBody}</p>
-            <div className="mt-10 grid gap-4 sm:grid-cols-3">
-              {["01", "02", "03"].map((k) => (
-                <div
-                  key={k}
-                  className="flex aspect-[4/3] flex-col items-center justify-center rounded-2xl border border-zinc-200/90 bg-white p-6 text-center shadow-sm"
-                >
-                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-200/80 text-sm font-medium text-zinc-600">
-                    n_nsalon
-                  </div>
-                  <p className={`${sansName} mt-4 text-sm text-zinc-500`}>
-                    {locale === "zh-HK" ? "造型師" : "Stylist"} · {k}
-                  </p>
-                </div>
-              ))}
-            </div>
           </div>
         </section>
       </main>

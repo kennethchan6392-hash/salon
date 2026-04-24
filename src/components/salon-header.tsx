@@ -4,7 +4,6 @@ type Nav = {
   brandName: string;
   home: string;
   priceList: string;
-  ourTeam: string;
   contact: string;
   shop: string;
   searchAria: string;
@@ -68,9 +67,6 @@ export function SalonHeader(t: Nav) {
           <a href="#price-list" className="rounded-md px-2.5 py-1.5 transition hover:bg-zinc-100">
             {t.priceList}
           </a>
-          <a href="#team" className="rounded-md px-2.5 py-1.5 transition hover:bg-zinc-100">
-            {t.ourTeam}
-          </a>
           <a href="#contact" className="rounded-md px-2.5 py-1.5 transition hover:bg-zinc-100">
             {t.contact}
           </a>
@@ -130,7 +126,6 @@ export function SalonHeader(t: Nav) {
             {t.home}
           </Link>
           <a href="#price-list">{t.priceList}</a>
-          <a href="#team">{t.ourTeam}</a>
           <a href="#contact">{t.contact}</a>
           <a href="#shop">{t.shop}</a>
         </div>
