@@ -1,0 +1,83 @@
+# Static marketing site only: /api, /admin, and middleware are omitted (Next.js static export cannot host them).
+# Full app with booking, checkout, and DB: deploy to Vercel or another Node host instead.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: ["main", "master"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Prepare static export (GitHub Pages cannot run API routes or middleware)
+        run: |
+          rm -f src/middleware.ts
+          rm -rf src/app/api
+          rm -rf src/app/admin
+
+      - name: Build
+        env:
+          STATIC_EXPORT: "1"
+          NEXT_PUBLIC_SITE_URL: https://kennethchan6392-hash.github.io/salon
+          DATABASE_URL: postgresql://build:build@127.0.0.1:1/build
+        run: npm run build
+
+      - name: Disable Jekyll (ensures _next and other assets are served as-is)
+        run: touch out/.nojekyll
+
+      # `next` static export RSC root redirect is not a real HTML refresh; add a real entry for /salon
+      - name: Root page redirect for static hosting
+        run: |
+          cat > out/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="zh-HK">
+            <head>
+              <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1" />
+              <meta http-equiv="refresh" content="0; url=./zh-HK/" />
+              <title>藝能美髮培訓中心 | n_nsalon</title>
+              <link rel="icon" href="./favicon.ico" sizes="256x256" type="image/x-icon" />
+            </head>
+            <body>
+              <p>Redirecting to <a href="./zh-HK/">主頁</a>…</p>
+            </body>
+          </html>
+          EOF
+
+      - name: Verify static output
+        run: test -f out/zh-HK/index.html && test -d out/_next && ls -la out | head -20
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

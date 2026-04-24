@@ -52,19 +52,19 @@ export function SalonHeader(t: Nav) {
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-200/80 bg-white/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-3.5">
-        <a
+        <Link
           href={`/${t.locale}`}
           className="font-[family-name:var(--font-display)] text-lg tracking-tight text-zinc-900 sm:text-xl"
         >
           {t.brandName}
-        </a>
+        </Link>
         <nav
           className="hidden items-center gap-1 text-sm font-medium text-zinc-700 md:flex"
           aria-label="Primary"
         >
-          <a href={`/${t.locale}`} className="rounded-md px-2.5 py-1.5 transition hover:bg-zinc-100">
+          <Link href={`/${t.locale}`} className="rounded-md px-2.5 py-1.5 transition hover:bg-zinc-100">
             {t.home}
-          </a>
+          </Link>
           <a href="#price-list" className="rounded-md px-2.5 py-1.5 transition hover:bg-zinc-100">
             {t.priceList}
           </a>
@@ -126,9 +126,9 @@ export function SalonHeader(t: Nav) {
       </div>
       <div className="border-t border-zinc-100 bg-zinc-50/80 px-4 py-1.5 md:hidden">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center text-xs font-medium text-zinc-600">
-          <a href={`/${t.locale}`} className="text-zinc-800">
+          <Link href={`/${t.locale}`} className="text-zinc-800">
             {t.home}
-          </a>
+          </Link>
           <a href="#price-list">{t.priceList}</a>
           <a href="#team">{t.ourTeam}</a>
           <a href="#contact">{t.contact}</a>

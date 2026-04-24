@@ -43,6 +43,14 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## GitHub Pages (static site only)
+
+[GitHub Pages](https://pages.github.com/) serves **static files** only. It does **not** run Node or your `/api` routes, so booking, checkout, admin, and Prisma **cannot** work on Pages. The workflow [`.github/workflows/deploy-github-pages.yml`](.github/workflows/deploy-github-pages.yml) builds a **read-only** marketing copy (`STATIC_EXPORT=1`, `basePath: /salon`).
+
+- In the repo: **Settings → Pages → Build and deployment → Source: GitHub Actions** (not “Deploy from a branch” with Jekyll, or you will only see the README, e.g. on [a similar setup](https://kennethchan6392-hash.github.io/salon/)).
+- After the first successful workflow run, open **`https://<user>.github.io/<repo>/zh-HK/`** (or your configured URL).
+- For the full app (APIs, DB, Stripe, admin), use **Vercel**, **Railway**, or any Node host.
+
 ## Stripe Webhook (Local)
 
 Run Stripe CLI and forward webhook to the app:

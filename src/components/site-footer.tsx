@@ -66,8 +66,8 @@ export function SiteFooter(p: FooterProps) {
           <div className="sm:col-span-2 md:col-span-1">
             <h3 className="text-sm font-semibold text-zinc-500">{p.hoursTitle}</h3>
             <ul className="mt-2 space-y-1 text-sm text-zinc-800 whitespace-pre-line">
-              {p.hoursDetail.split("\n").map((line) => (
-                <li key={line}>{line}</li>
+              {p.hoursDetail.split("\n").map((line, i) => (
+                <li key={`${i}-${line}`}>{line}</li>
               ))}
             </ul>
           </div>

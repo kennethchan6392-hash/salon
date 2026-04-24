@@ -9,10 +9,13 @@ import { SalonHeader } from "@/components/salon-header";
 import { ShopPromoBanner } from "@/components/shop-promo-banner";
 import { SiteFooter } from "@/components/site-footer";
 import { WhatsAppFloat } from "@/components/whatsapp-float";
-import { getMessages, isSupportedLocale } from "@/lib/i18n";
+import { getMessages, isSupportedLocale, supportedLocales } from "@/lib/i18n";
 import { getHomeProducts, getHomeSlotsForService } from "@/lib/home-data";
 
-export const dynamic = "force-dynamic";
+/** Prebuild both locales; required for `output: 'export'` (GitHub Pages) and static HTML at deploy. */
+export function generateStaticParams() {
+  return supportedLocales.map((locale) => ({ locale }));
+}
 
 const display = Playfair_Display({
   weight: ["500", "600", "700"],

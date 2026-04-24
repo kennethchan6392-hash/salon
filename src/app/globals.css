@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Keep the marketing site consistently light: OS “dark mode” was flipping body to near-black
+   and light gray text, which could make unstyled or inherited text hard to read. */
+html {
+  color-scheme: light;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -10,13 +16,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
