@@ -7,10 +7,13 @@ import { HeroSalon } from "@/components/hero-salon";
 import { SalonTopBar } from "@/components/salon-top-bar";
 import { SalonHeader } from "@/components/salon-header";
 import { ShopPromoBanner } from "@/components/shop-promo-banner";
+import { PriceListSection } from "@/components/price-list-section";
 import { SiteFooter } from "@/components/site-footer";
 import { WhatsAppFloat } from "@/components/whatsapp-float";
 import { getMessages, isSupportedLocale, supportedLocales } from "@/lib/i18n";
 import { getHomeProducts, getHomeSlotsForService } from "@/lib/home-data";
+import { pickShopCheckoutCopy } from "@/lib/shop-checkout-copy";
+import { phoneToE164 } from "@/lib/tel-href";
 
 /** Prebuild both locales; required for `output: 'export'` (GitHub Pages) and static HTML at deploy. */
 export function generateStaticParams() {
@@ -18,13 +21,13 @@ export function generateStaticParams() {
 }
 
 const display = Playfair_Display({
-  weight: ["500", "600", "700"],
+  weight: ["600", "700"],
   subsets: ["latin"],
   variable: "--font-display",
 });
 
 const sans = DM_Sans({
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600"],
   subsets: ["latin"],
   variable: "--font-sans-body",
 });
@@ -36,6 +39,11 @@ type HomePageProps = {
 const defaultService = "haircut";
 const businessSite = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
+/** Same asset as hero (`public/hero/salon-hero.jpg`); absolute URL for crawlers. */
+function ogImageUrl(siteBase: string) {
+  return `${siteBase}/hero/salon-hero.jpg`;
+}
+
 export async function generateMetadata({ params }: HomePageProps): Promise<Metadata> {
   const { locale } = await params;
   if (!isSupportedLocale(locale)) {
@@ -43,6 +51,7 @@ export async function generateMetadata({ params }: HomePageProps): Promise<Metad
   }
   const t = getMessages(locale);
   const path = `/${locale}`;
+  const shareImage = ogImageUrl(businessSite);
   return {
     title: t.brandName,
     description: t.brandSubtitle,
@@ -51,6 +60,20 @@ export async function generateMetadata({ params }: HomePageProps): Promise<Metad
       description: t.brandSubtitle,
       url: `${businessSite}${path}`,
       siteName: "n_nsalon",
+      images: [
+        {
+          url: shareImage,
+          width: 1920,
+          height: 1440,
+          alt: t.brandTitle,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: t.brandName,
+      description: t.brandSubtitle,
+      images: [shareImage],
     },
     alternates: {
       canonical: `${businessSite}${path}`,
@@ -73,15 +96,20 @@ export default async function LocaleHomePage({ params }: HomePageProps) {
   const t = getMessages(locale);
   const [initialProducts, initialSlots] = await Promise.all([
     getHomeProducts(),
-    getHomeSlotsForService(defaultService),
+    getHomeSlotsForService(locale, defaultService),
   ]);
 
   const sameAs: string[] = [];
   if (process.env.NEXT_PUBLIC_INSTAGRAM_URL) {
     sameAs.push(process.env.NEXT_PUBLIC_INSTAGRAM_URL);
   }
+  if (process.env.NEXT_PUBLIC_FACEBOOK_URL) {
+    sameAs.push(process.env.NEXT_PUBLIC_FACEBOOK_URL);
+  }
 
   const displayEmail = process.env.NEXT_PUBLIC_SALON_EMAIL?.trim() || t.displayEmail;
+  const facebookUrl = process.env.NEXT_PUBLIC_FACEBOOK_URL?.trim() || null;
+  const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL?.trim() || null;
   const whatsappUrl: string | null = (() => {
     if (process.env.NEXT_PUBLIC_WHATSAPP_URL) {
       return process.env.NEXT_PUBLIC_WHATSAPP_URL;
@@ -107,7 +135,7 @@ export default async function LocaleHomePage({ params }: HomePageProps) {
       addressLocality: "Macau",
       addressCountry: "MO",
     },
-    telephone: t.phone,
+    telephone: phoneToE164(t.phone),
     url: businessSite,
     sameAs: sameAs.length > 0 ? sameAs : undefined,
     areaServed: { "@type": "Place", name: "Macau" },
@@ -116,9 +144,13 @@ export default async function LocaleHomePage({ params }: HomePageProps) {
   const displayName = display.className;
   const sansName = sans.className;
 
+  const bookingNoSlotsHint = t.bookingNoSlotsLine.replace("{phone}", t.phone);
+
   return (
     <div
-      className={`min-h-screen bg-zinc-50 text-zinc-900 ${display.variable} ${sans.variable} [font-family:var(--font-sans-body),ui-sans-serif,system-ui,sans-serif]`}
+      id="main-content"
+      tabIndex={-1}
+      className={`min-h-screen bg-zinc-50 text-zinc-900 ${display.variable} ${sans.variable} [font-family:var(--font-sans-body),ui-sans-serif,system-ui,sans-serif]${whatsappUrl ? " pb-28 [padding-bottom:max(7rem,env(safe-area-inset-bottom,0px))] sm:pb-32" : ""}`}
     >
       <script
         type="application/ld+json"
@@ -136,6 +168,7 @@ export default async function LocaleHomePage({ params }: HomePageProps) {
         priceList={t.navPriceList}
         contact={t.navContact}
         shop={t.navShop}
+        searchLabel={t.navSearchLabel}
         searchAria={t.searchAria}
         cartAria={t.cartAria}
         cartEmpty={t.cartEmpty}
@@ -157,7 +190,9 @@ export default async function LocaleHomePage({ params }: HomePageProps) {
 
         <section id="story" className="border-b border-zinc-200/80 bg-white">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
-            <h2 className={`${displayName} text-3xl text-zinc-900 md:text-4xl`}>{t.storyTitle}</h2>
+            <h2 className={`${displayName} text-3xl font-semibold text-zinc-900 md:text-4xl`}>
+              {t.storyTitle}
+            </h2>
             <p
               className={`${sansName} mt-6 max-w-2xl whitespace-pre-line text-base leading-relaxed text-zinc-600`}
             >
@@ -168,7 +203,7 @@ export default async function LocaleHomePage({ params }: HomePageProps) {
 
         <section id="services" className="border-b border-zinc-200/80">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
-            <h2 className={`${displayName} text-3xl text-zinc-900 md:text-4xl`}>
+            <h2 className={`${displayName} text-3xl font-semibold text-zinc-900 md:text-4xl`}>
               {t.servicesSectionTitle}
             </h2>
             <div className="mt-12 grid gap-6 md:grid-cols-3">
@@ -181,7 +216,7 @@ export default async function LocaleHomePage({ params }: HomePageProps) {
                   key={item.title}
                   className="group border border-zinc-200/90 bg-white p-8 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-amber-200/80 hover:shadow-md"
                 >
-                  <h3 className={`${displayName} text-xl font-medium text-zinc-900`}>{item.title}</h3>
+                  <h3 className={`${displayName} text-xl font-semibold text-zinc-900`}>{item.title}</h3>
                   <p className={`${sansName} mt-4 text-sm leading-relaxed text-zinc-600`}>
                     {item.body}
                   </p>
@@ -200,36 +235,43 @@ export default async function LocaleHomePage({ params }: HomePageProps) {
 
         <section id="booking" className="border-b border-zinc-800/60 bg-zinc-950 text-zinc-100">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
-            <h2 className={`${displayName} text-3xl text-white md:text-4xl`}>{t.bookingTitle}</h2>
+            <h2 className={`${displayName} text-3xl font-semibold text-white md:text-4xl`}>
+              {t.bookingTitle}
+            </h2>
             <p className={`${sansName} mt-3 max-w-2xl text-zinc-400`}>{t.bookingFlow}</p>
             <BookingForm
               locale={locale}
               initialSlots={initialSlots}
               defaultServiceId={defaultService}
+              noSlotsHint={bookingNoSlotsHint}
             />
           </div>
         </section>
 
         <section id="shop" className="border-b border-neutral-200/90 bg-white text-zinc-900">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
-            <h2 className={`${displayName} text-3xl text-zinc-900 md:text-4xl`}>
+            <h2 className={`${displayName} text-3xl font-semibold text-zinc-900 md:text-4xl`}>
               {t.shopSectionTitle}
             </h2>
             <p className={`${sansName} mt-3 max-w-2xl text-sm text-zinc-500`}>
               {t.shopSectionNote}
             </p>
-            <ShopCheckout locale={locale} initialProducts={initialProducts} />
+            <ShopCheckout
+              locale={locale}
+              copy={pickShopCheckoutCopy(t)}
+              initialProducts={initialProducts}
+            />
           </div>
         </section>
 
-        <section id="price-list" className="border-b border-zinc-200/80 bg-white">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-            <h2 className={`${displayName} text-3xl text-zinc-900 md:text-4xl`}>
-              {t.priceListTitle}
-            </h2>
-            <p className={`${sansName} mt-4 max-w-2xl text-zinc-600`}>{t.priceListBody}</p>
-          </div>
-        </section>
+        <PriceListSection
+          locale={locale}
+          displayClassName={displayName}
+          sansClassName={sansName}
+          priceListTitle={t.priceListTitle}
+          intro={t.priceListIntro}
+          disclaimer={t.priceListDisclaimer}
+        />
       </main>
       {whatsappUrl ? (
         <WhatsAppFloat
@@ -240,12 +282,13 @@ export default async function LocaleHomePage({ params }: HomePageProps) {
         />
       ) : null}
       <SiteFooter
-        displayClassName={displayName}
         sansClassName={sansName}
         tagline={t.footerTagline}
-        addressLabel={t.contactAddressLabel}
-        phoneLabel={t.contactPhoneLabel}
-        emailLabel={t.contactEmailLabel}
+        logoPrimary={t.footerLogoPrimary}
+        logoSub={t.footerLogoSub}
+        contactHeading={t.footerContactHeading}
+        emailLinePrefix={t.emailLinePrefix}
+        telLinePrefix={t.telLinePrefix}
         whatsappLabel={t.contactWhatsappLabel}
         address={t.address}
         phone={t.phone}
@@ -254,7 +297,8 @@ export default async function LocaleHomePage({ params }: HomePageProps) {
         hoursDetail={t.hoursDetail}
         whatsappUrl={whatsappUrl}
         waDisplay={waDisplay}
-        navTitle={t.footerNavTitle}
+        facebookUrl={facebookUrl}
+        instagramUrl={instagramUrl}
       />
     </div>
   );

@@ -28,7 +28,12 @@ export default function RootLayout({
       lang="zh-HK"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <a className="skip-to-main" href="#main-content">
+          跳至主內容 <span className="text-zinc-400">·</span> Skip to main content
+        </a>
+        {children}
+      </body>
     </html>
   );
 }
