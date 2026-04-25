@@ -44,6 +44,9 @@ jobs:
         env:
           STATIC_EXPORT: "1"
           NEXT_PUBLIC_SITE_URL: https://kennethchan6392-hash.github.io/salon
+          NEXT_PUBLIC_INSTAGRAM_URL: https://www.instagram.com/n_nsalon/
+          # Must match next.config `basePath` — `next/image` unoptimized src omits it otherwise (broken hero on Pages).
+          NEXT_PUBLIC_BASE_PATH: /salon
           DATABASE_URL: postgresql://build:build@127.0.0.1:1/build
         run: npm run build
 
