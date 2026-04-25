@@ -67,6 +67,7 @@ model Product {
   nameZh      String
   nameEn      String
   description String?
+  imageUrl    String?
   priceCents  Int
   currency    String      @default("hkd")
   isActive    Boolean     @default(true)

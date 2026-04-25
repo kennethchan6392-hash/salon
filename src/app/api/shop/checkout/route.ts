@@ -77,6 +77,12 @@ export async function POST(request: Request) {
       0,
     );
 
+    const orderCurrencies = [...new Set(mappedItems.map((item) => item.product.currency.toLowerCase()))];
+    if (orderCurrencies.length > 1) {
+      return { status: 400, body: { message: "Mixed currencies in one order are not supported." } };
+    }
+    const orderCurrency = orderCurrencies[0] ?? "hkd";
+
     if (paymentMethod !== "stripe_card") {
       const uploadToken = randomBytes(32).toString("hex");
       const order = await prisma.order.create({
@@ -84,7 +90,7 @@ export async function POST(request: Request) {
           customerName: body.customerName,
           customerEmail: body.customerEmail,
           totalAmountCents,
-          currency: "hkd",
+          currency: orderCurrency,
           status: "pending",
           paymentMethod,
           paymentUploadToken: uploadToken,
@@ -131,7 +137,7 @@ export async function POST(request: Request) {
         customerName: body.customerName,
         customerEmail: body.customerEmail,
         totalAmountCents,
-        currency: "hkd",
+        currency: orderCurrency,
         status: "pending",
         paymentMethod: "stripe_card",
         paymentNote: "Paid through Stripe card checkout.",

@@ -1,19 +1,18 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Playfair_Display, DM_Sans } from "next/font/google";
-import { BookingForm } from "@/components/booking-form";
-import { HeroSalon } from "@/components/hero-salon";
+import { ShopCheckout } from "@/components/shop-checkout";
 import { SalonTopBar } from "@/components/salon-top-bar";
 import { SalonHeader } from "@/components/salon-header";
-import { ShopPromoBanner } from "@/components/shop-promo-banner";
-import { PriceListSection } from "@/components/price-list-section";
 import { SiteFooter } from "@/components/site-footer";
 import { WhatsAppFloat } from "@/components/whatsapp-float";
 import { getMessages, isSupportedLocale, supportedLocales } from "@/lib/i18n";
-import { getHomeSlotsForService } from "@/lib/home-data";
+import type { Locale } from "@/lib/i18n";
+import { getHomeProducts } from "@/lib/home-data";
+import { pickShopCheckoutCopy } from "@/lib/shop-checkout-copy";
 import { phoneToE164 } from "@/lib/tel-href";
 
-/** Prebuild both locales; required for `output: 'export'` (GitHub Pages) and static HTML at deploy. */
 export function generateStaticParams() {
   return supportedLocales.map((locale) => ({ locale }));
 }
@@ -30,70 +29,61 @@ const sans = DM_Sans({
   variable: "--font-sans-body",
 });
 
-type HomePageProps = {
-  params: Promise<{ locale: string }>;
-};
-
-const defaultService = "haircut";
 const businessSite = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-/** Same asset as hero (`public/ad-stock/03-salon-interior-wide.jpg`). */
 function ogImageUrl(siteBase: string) {
   return `${siteBase}/ad-stock/03-salon-interior-wide.jpg`;
 }
 
-export async function generateMetadata({ params }: HomePageProps): Promise<Metadata> {
+type PageProps = {
+  params: Promise<{ locale: string }>;
+};
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale } = await params;
   if (!isSupportedLocale(locale)) {
     return {};
   }
   const t = getMessages(locale);
-  const path = `/${locale}`;
+  const path = `/${locale}/products`;
   const shareImage = ogImageUrl(businessSite);
+  const title = `${t.shopSectionTitle} · ${t.brandName}`;
   return {
-    title: t.brandName,
-    description: t.brandSubtitle,
+    title,
+    description: t.shopSectionNote,
     openGraph: {
-      title: t.brandName,
-      description: t.brandSubtitle,
+      title,
+      description: t.shopSectionNote,
       url: `${businessSite}${path}`,
       siteName: "n_nsalon",
-      images: [
-        {
-          url: shareImage,
-          width: 1600,
-          height: 1200,
-          alt: t.brandTitle,
-        },
-      ],
+      images: [{ url: shareImage, width: 1600, height: 1200, alt: t.brandTitle }],
     },
     twitter: {
       card: "summary_large_image",
-      title: t.brandName,
-      description: t.brandSubtitle,
+      title,
+      description: t.shopSectionNote,
       images: [shareImage],
     },
     alternates: {
       canonical: `${businessSite}${path}`,
       languages: {
-        "zh-HK": `${businessSite}/zh-HK`,
-        en: `${businessSite}/en`,
-        "x-default": `${businessSite}/zh-HK`,
+        "zh-HK": `${businessSite}/zh-HK/products`,
+        en: `${businessSite}/en/products`,
+        "x-default": `${businessSite}/zh-HK/products`,
       },
     },
   };
 }
 
-export default async function LocaleHomePage({ params }: HomePageProps) {
-  const { locale } = await params;
-
-  if (!isSupportedLocale(locale)) {
+export default async function ProductsPage({ params }: PageProps) {
+  const { locale: localeParam } = await params;
+  if (!isSupportedLocale(localeParam)) {
     notFound();
   }
+  const locale = localeParam as Locale;
 
   const t = getMessages(locale);
-  const initialSlots = await getHomeSlotsForService(locale, defaultService);
-  const productsPath = `/${locale}/products`;
+  const initialProducts = await getHomeProducts();
 
   const sameAs: string[] = [];
   if (process.env.NEXT_PUBLIC_INSTAGRAM_URL) {
@@ -121,6 +111,7 @@ export default async function LocaleHomePage({ params }: HomePageProps) {
   const waDisplay =
     process.env.NEXT_PUBLIC_WHATSAPP_PHONE?.replace(/\s/g, "")?.trim() || `+853 ${t.phone}`;
 
+  const productsPath = `/${locale}/products`;
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "HairSalon",
@@ -139,8 +130,6 @@ export default async function LocaleHomePage({ params }: HomePageProps) {
 
   const displayName = display.className;
   const sansName = sans.className;
-
-  const bookingNoSlotsHint = t.bookingNoSlotsLine.replace("{phone}", t.phone);
 
   return (
     <div
@@ -173,88 +162,39 @@ export default async function LocaleHomePage({ params }: HomePageProps) {
         productsPath={productsPath}
       />
       <main>
-        <HeroSalon
-          brandTitle={t.brandTitle}
-          brandSubtitle={t.brandSubtitle}
-          kw1={t.heroKwHairCare}
-          kw2={t.heroKwSkillful}
-          kw3={t.heroKwSince}
-          bookNow={t.bookNow}
-          shopNow={t.shopNow}
-          shopHref={productsPath}
-          displayClassName={displayName}
-          sansClassName={sansName}
-        />
-
-        <section id="story" className="border-b border-zinc-200/80 bg-white">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
-            <h2 className={`${displayName} text-3xl font-semibold text-zinc-900 md:text-4xl`}>
-              {t.storyTitle}
-            </h2>
-            <p
-              className={`${sansName} mt-6 max-w-2xl whitespace-pre-line text-base leading-relaxed text-zinc-600`}
-            >
-              {t.storyBody}
-            </p>
+        <nav
+          className="border-b border-zinc-200/80 bg-white"
+          aria-label="Breadcrumb"
+        >
+          <div className={`mx-auto max-w-6xl px-4 py-3 text-sm sm:px-6 ${sansName}`}>
+            <Link href={`/${locale}`} className="text-zinc-600 underline-offset-4 hover:text-zinc-900 hover:underline">
+              {t.navHome}
+            </Link>
+            <span className="text-zinc-400" aria-hidden>
+              {" "}
+              /{" "}
+            </span>
+            <span className="text-zinc-900">{t.shopSectionTitle}</span>
           </div>
-        </section>
+        </nav>
 
-        <section id="services" className="border-b border-zinc-200/80">
+        <section
+          id="shop"
+          className="border-b border-neutral-200/90 bg-gradient-to-b from-zinc-100 via-white to-zinc-50 text-zinc-900"
+        >
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
-            <h2 className={`${displayName} text-3xl font-semibold text-zinc-900 md:text-4xl`}>
-              {t.servicesSectionTitle}
-            </h2>
-            <div className="mt-12 grid gap-6 md:grid-cols-3">
-              {[
-                { title: t.serviceCutTitle, body: t.serviceCutBody },
-                { title: t.serviceTechTitle, body: t.serviceTechBody },
-                { title: t.serviceCareTitle, body: t.serviceCareBody },
-              ].map((item) => (
-                <div
-                  key={item.title}
-                  className="group border border-zinc-200/90 bg-white p-8 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-amber-200/80 hover:shadow-md"
-                >
-                  <h3 className={`${displayName} text-xl font-semibold text-zinc-900`}>{item.title}</h3>
-                  <p className={`${sansName} mt-4 text-sm leading-relaxed text-zinc-600`}>
-                    {item.body}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+            <h1 className={`${displayName} text-3xl font-semibold text-zinc-900 md:text-4xl`}>
+              {t.shopSectionTitle}
+            </h1>
+            <p className={`${sansName} mt-3 max-w-2xl text-sm text-zinc-500`}>{t.shopSectionNote}</p>
 
-        <ShopPromoBanner
-          title={t.shopBannerTitle}
-          body={t.shopBannerBody}
-          cta={t.shopBannerCta}
-          ctaHref={productsPath}
-          sansClassName={sansName}
-        />
-
-        <section id="booking" className="border-b border-zinc-800/60 bg-zinc-950 text-zinc-100">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
-            <h2 className={`${displayName} text-3xl font-semibold text-white md:text-4xl`}>
-              {t.bookingTitle}
-            </h2>
-            <p className={`${sansName} mt-3 max-w-2xl text-zinc-400`}>{t.bookingFlow}</p>
-            <BookingForm
+            <ShopCheckout
               locale={locale}
-              initialSlots={initialSlots}
-              defaultServiceId={defaultService}
-              noSlotsHint={bookingNoSlotsHint}
+              copy={pickShopCheckoutCopy(t)}
+              initialProducts={initialProducts}
             />
           </div>
         </section>
-
-        <PriceListSection
-          locale={locale}
-          displayClassName={displayName}
-          sansClassName={sansName}
-          priceListTitle={t.priceListTitle}
-          intro={t.priceListIntro}
-          disclaimer={t.priceListDisclaimer}
-        />
       </main>
       {whatsappUrl ? (
         <WhatsAppFloat

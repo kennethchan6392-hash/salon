@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { ShopCheckoutCopy } from "@/lib/shop-checkout-copy";
+import { publicAssetPath } from "@/lib/public-asset-path";
 
 type Product = {
   id: string;
@@ -9,6 +11,7 @@ type Product = {
   nameEn: string;
   priceCents: number;
   currency: string;
+  imageUrl?: string | null;
 };
 
 type ShopCheckoutProps = {
@@ -20,6 +23,10 @@ type ShopCheckoutProps = {
 
 type PaymentMethod = "mpay" | "boc" | "uepay" | "bank_transfer" | "stripe_card";
 type SortKey = "default" | "price-asc" | "price-desc";
+type CategoryKey = "shampoo" | "conditioner" | "treatment" | "styling" | "uncategorized";
+type ViewMode = "grid-3" | "grid-2" | "list";
+
+const ALL_CATEGORY_KEYS: CategoryKey[] = ["shampoo", "conditioner", "treatment", "styling", "uncategorized"];
 
 type LocalPaymentResponse = {
   orderId: string;
@@ -31,8 +38,6 @@ type LocalPaymentResponse = {
   message: string;
   uploadToken: string;
 };
-
-type CategoryKey = "shampoo" | "conditioner" | "treatment" | "styling" | "uncategorized";
 
 const paymentOptions: { value: PaymentMethod; label: string }[] = [
   { value: "mpay", label: "MPay" },
@@ -49,16 +54,46 @@ function createIdempotencyKey() {
   return `idemp_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
+function formatProductTitle(p: Product, locale: string) {
+  if (locale === "zh-HK") {
+    return p.nameZh;
+  }
+  return p.nameEn.toUpperCase();
+}
+
+function priceDisplay(cents: number, currency = "hkd") {
+  const amount = (cents / 100).toFixed(2);
+  if (currency.toLowerCase() === "mop") {
+    return `MOP ${amount}`;
+  }
+  return `HK$ ${amount}`;
+}
+
 function inferCategoryKey(p: { nameZh: string; nameEn: string }): CategoryKey {
   const s = `${p.nameZh} ${p.nameEn}`.toLowerCase();
   if (/shampoo|洗髮|洗发/.test(s)) {
     return "shampoo";
   }
-  if (/treatment|mask|髮膜|发膜|髮油|发油|髮朮|修護|修护|treatment|ampoule|serum|精華|精华|膜/.test(s)) {
+  if (/\boil\b|hair oil|髮油|发油|頭髮油|头发油|haaröl/.test(s)) {
     return "treatment";
   }
-  if (/conditioner|護髮|护发|护髮素|护发素|cream/.test(s)) {
+  if (/\bbalm\b|balsam|taming|順服乳霜/.test(s)) {
+    return "treatment";
+  }
+  if (/treatment|mask|髮膜|发膜|髮朮|修護|修护|ampoule|serum|精華|精华|膜/.test(s)) {
+    return "treatment";
+  }
+  if (/conditioner|護髮素|护发素/.test(s)) {
     return "conditioner";
+  }
+  if (/conditioner|護髮|护发|cream/.test(s)) {
+    return "conditioner";
+  }
+  if (/hair growth|育髮|生髮|ahcmax/i.test(s)) {
+    return "treatment";
+  }
+  if (/clay|髮泥|matte paste|texturising|paste/.test(s)) {
+    return "styling";
   }
   if (/hairspray|mousse|spray|styling|wax|gel|造型|噴霧|啫/.test(s)) {
     return "styling";
@@ -66,7 +101,7 @@ function inferCategoryKey(p: { nameZh: string; nameEn: string }): CategoryKey {
   return "uncategorized";
 }
 
-function categoryText(t: ShopCheckoutCopy, key: CategoryKey) {
+function categoryLabel(t: ShopCheckoutCopy, key: CategoryKey) {
   switch (key) {
     case "shampoo":
       return t.catShampoo;
@@ -81,28 +116,38 @@ function categoryText(t: ShopCheckoutCopy, key: CategoryKey) {
   }
 }
 
-function formatProductTitle(p: Product, locale: string) {
-  if (locale === "zh-HK") {
-    return p.nameZh;
+function productStarRating(product: Product): number {
+  let h = 0;
+  for (let i = 0; i < product.id.length; i += 1) {
+    h += product.id.charCodeAt(i);
   }
-  return p.nameEn.toUpperCase();
+  return Math.round((4.55 + (h % 8) * 0.05) * 10) / 10;
 }
 
-function priceDisplay(cents: number) {
-  return `HK$ ${(cents / 100).toFixed(2)}`;
+function StarRow({ value, align = "center" }: { value: number; align?: "center" | "start" }) {
+  return (
+    <div
+      className={`mt-2 flex flex-wrap items-center gap-0.5 text-[11px] leading-none text-zinc-900 ${
+        align === "start" ? "justify-start" : "justify-center"
+      }`}
+    >
+      <span aria-hidden>★★★★★</span>
+      <span className="ml-1 tabular-nums text-neutral-500">({value.toFixed(1)})</span>
+    </div>
+  );
 }
 
 function ProductBottlePlaceholder() {
   return (
     <div
       className="flex h-28 w-16 items-end justify-center sm:h-32 sm:w-20"
-      style={{ filter: "drop-shadow(0 12px 20px rgba(0,0,0,0.12))" }}
+      style={{ filter: "drop-shadow(0 12px 20px rgba(0,0,0,0.08))" }}
     >
-      <svg viewBox="0 0 64 120" className="h-full w-full text-neutral-400" aria-hidden>
+      <svg viewBox="0 0 64 120" className="h-full w-full text-neutral-300" aria-hidden>
         <rect x="18" y="0" width="28" height="10" rx="2" className="fill-current opacity-50" />
-        <rect x="14" y="10" width="36" height="70" rx="4" className="fill-white stroke-neutral-300" strokeWidth="1" />
-        <rect x="20" y="18" width="24" height="48" rx="1" className="fill-neutral-200/80" />
-        <path d="M22 80 Q32 90 42 80 L40 110 Q32 115 24 110 Z" className="fill-white stroke-neutral-300" strokeWidth="1" />
+        <rect x="14" y="10" width="36" height="70" rx="4" className="fill-white stroke-neutral-200" strokeWidth="1" />
+        <rect x="20" y="18" width="24" height="48" rx="1" className="fill-neutral-100" />
+        <path d="M22 80 Q32 90 42 80 L40 110 Q32 115 24 110 Z" className="fill-white stroke-neutral-200" strokeWidth="1" />
       </svg>
     </div>
   );
@@ -110,6 +155,7 @@ function ProductBottlePlaceholder() {
 
 function ShopProductCard({
   product,
+  layout,
   isSelected,
   onSelect,
   onAdd,
@@ -117,43 +163,233 @@ function ShopProductCard({
   locale,
 }: {
   product: Product;
+  layout: "grid" | "list";
   isSelected: boolean;
   onSelect: () => void;
   onAdd: () => void;
   t: ShopCheckoutCopy;
   locale: string;
 }) {
-  const cat = inferCategoryKey(product);
+  const title = formatProductTitle(product, locale);
+  const stars = productStarRating(product);
+
+  if (layout === "list") {
+    return (
+      <article
+        className={`group flex gap-4 rounded-xl border bg-white p-4 text-left shadow-sm transition-all duration-300 ease-out motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-md ${
+          isSelected ? "border-zinc-900 ring-2 ring-zinc-900/20" : "border-neutral-200 hover:border-neutral-300"
+        }`}
+      >
+        <button type="button" onClick={onSelect} className="w-28 shrink-0 sm:w-32">
+          <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-neutral-50">
+            {product.imageUrl ? (
+              <Image
+                src={publicAssetPath(product.imageUrl)}
+                alt=""
+                width={200}
+                height={200}
+                className="h-full w-full object-contain p-2 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-safe:group-hover:scale-[1.04]"
+                unoptimized
+              />
+            ) : (
+              <ProductBottlePlaceholder />
+            )}
+          </div>
+        </button>
+        <div className="flex min-w-0 flex-1 flex-col justify-center">
+          <button type="button" onClick={onSelect} className="text-left">
+            <h3 className="text-sm font-medium text-neutral-900">{title}</h3>
+            <p className="mt-1 text-sm text-neutral-800">{priceDisplay(product.priceCents, product.currency)}</p>
+            <StarRow value={stars} align="start" />
+          </button>
+          <button
+            type="button"
+            onClick={onAdd}
+            className="mt-3 w-fit rounded-full border border-neutral-300 bg-white px-4 py-2 text-xs font-medium uppercase tracking-wider text-neutral-800 transition-all duration-200 ease-out hover:border-zinc-900 hover:bg-zinc-50 active:scale-[0.98] motion-reduce:active:scale-100"
+          >
+            {t.shopAddToCart}
+          </button>
+        </div>
+      </article>
+    );
+  }
+
+  const imgBlockGrid = (
+    <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-t-xl bg-neutral-50">
+      {product.imageUrl ? (
+        <Image
+          src={publicAssetPath(product.imageUrl)}
+          alt=""
+          width={360}
+          height={360}
+          className="h-full w-full object-contain p-4 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-safe:group-hover:scale-[1.03]"
+          unoptimized
+        />
+      ) : (
+        <ProductBottlePlaceholder />
+      )}
+    </div>
+  );
+
   return (
     <article
-      className={`text-center ${isSelected ? "ring-2 ring-zinc-900 ring-offset-2 ring-offset-white" : ""}`}
+      className={`group flex flex-col rounded-xl border bg-white text-center shadow-sm transition-all duration-300 ease-out motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-lg ${
+        isSelected
+          ? "border-zinc-900 shadow-md ring-2 ring-zinc-900/20"
+          : "border-neutral-100 hover:border-neutral-200"
+      }`}
     >
       <button
         type="button"
         onClick={onSelect}
-        className="w-full text-left"
+        className="w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
         aria-pressed={isSelected}
-        aria-label={formatProductTitle(product, locale)}
+        aria-label={title}
       >
-        <div className="flex aspect-square items-center justify-center bg-neutral-100 p-6 sm:p-8">
-          <ProductBottlePlaceholder />
-        </div>
-        <p className="mt-3 text-[10px] font-medium uppercase tracking-[0.2em] text-neutral-400">
-          {categoryText(t, cat)}
-        </p>
-        <h3 className="mt-2 text-sm font-semibold uppercase leading-tight text-neutral-900 sm:text-sm">
-          {formatProductTitle(product, locale)}
-        </h3>
-        <p className="mt-1 text-sm text-neutral-800">{priceDisplay(product.priceCents)}</p>
+        {imgBlockGrid}
+        <h3 className="mt-4 line-clamp-2 px-1 text-sm font-medium leading-snug text-neutral-900">{title}</h3>
+        <p className="mt-2 text-sm text-neutral-800">{priceDisplay(product.priceCents, product.currency)}</p>
+        <StarRow value={stars} />
       </button>
       <button
         type="button"
         onClick={onAdd}
-        className="mt-3 w-full border border-neutral-200 bg-white py-2.5 text-xs font-medium uppercase tracking-wider text-neutral-800 transition hover:border-zinc-900 hover:bg-zinc-50"
+        className="mt-4 w-full rounded-b-xl border-x border-b border-neutral-200 bg-white py-2.5 text-xs font-medium uppercase tracking-wider text-neutral-800 transition-all duration-200 ease-out hover:border-zinc-900 hover:bg-zinc-50 active:scale-[0.99] motion-reduce:active:scale-100"
       >
         {t.shopAddToCart}
       </button>
     </article>
+  );
+}
+
+function FilterSidebar({
+  t,
+  categoryOptions,
+  filterCats,
+  toggleFilter,
+  clearFilters,
+}: {
+  t: ShopCheckoutCopy;
+  categoryOptions: CategoryKey[];
+  filterCats: CategoryKey[];
+  toggleFilter: (c: CategoryKey) => void;
+  clearFilters: () => void;
+}) {
+  const detailsClass =
+    "border-b border-neutral-200 py-1 [&_summary::-webkit-details-marker]:hidden [&_summary::marker]:content-['']";
+  const summaryClass =
+    "flex cursor-pointer list-none items-center justify-between gap-2 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-800 transition-colors duration-200 ease-out hover:text-neutral-950";
+
+  return (
+    <div className="space-y-0">
+      <details open className={detailsClass}>
+        <summary className={summaryClass}>
+          <span>
+            <span className="text-neutral-500">{t.shopFilterProductTypeEn}</span>
+            <span className="mx-1 text-neutral-300">·</span>
+            <span>{t.shopFilterProductType}</span>
+          </span>
+          <span className="text-neutral-400" aria-hidden>
+            ▾
+          </span>
+        </summary>
+        <div className="space-y-2 pb-3 pl-0.5">
+          <label className="flex cursor-pointer items-center gap-2 rounded-md py-0.5 text-sm text-neutral-700 transition-colors duration-150 ease-out hover:text-neutral-900">
+            <input
+              type="checkbox"
+              className="rounded border-neutral-300 transition-colors duration-150"
+              checked={filterCats.length === 0}
+              onChange={() => clearFilters()}
+            />
+            <span>{t.shopFilterAllTypes}</span>
+          </label>
+          {categoryOptions.map((key) => (
+            <label
+              key={key}
+              className="flex cursor-pointer items-center gap-2 rounded-md py-0.5 text-sm text-neutral-700 transition-colors duration-150 ease-out hover:text-neutral-900"
+            >
+              <input
+                type="checkbox"
+                className="rounded border-neutral-300 transition-colors duration-150"
+                checked={filterCats.includes(key)}
+                onChange={() => toggleFilter(key)}
+              />
+              <span>{categoryLabel(t, key)}</span>
+            </label>
+          ))}
+        </div>
+      </details>
+      <details className={detailsClass}>
+        <summary className={summaryClass}>
+          <span>
+            <span className="text-neutral-500">{t.shopFilterHairTypeEn}</span>
+            <span className="mx-1 text-neutral-300">·</span>
+            <span>{t.shopFilterHairType}</span>
+          </span>
+          <span className="text-neutral-400" aria-hidden>
+            ▾
+          </span>
+        </summary>
+        <p className="pb-3 text-xs leading-relaxed text-neutral-500">{t.shopFilterPlaceholder}</p>
+      </details>
+      <details className={detailsClass}>
+        <summary className={summaryClass}>
+          <span>
+            <span className="text-neutral-500">{t.shopFilterStyleEn}</span>
+            <span className="mx-1 text-neutral-300">·</span>
+            <span>{t.shopFilterStyle}</span>
+          </span>
+          <span className="text-neutral-400" aria-hidden>
+            ▾
+          </span>
+        </summary>
+        <p className="pb-3 text-xs leading-relaxed text-neutral-500">{t.shopFilterPlaceholder}</p>
+      </details>
+    </div>
+  );
+}
+
+function LocalPaymentStepper({
+  t,
+  proofUploaded,
+}: {
+  t: ShopCheckoutCopy;
+  proofUploaded: boolean;
+}) {
+  const labels = [t.shopPayStepOrder, t.shopPayStepTransfer, t.shopPayStepUpload, t.shopPayStepReview];
+  return (
+    <ol className="mt-4 grid gap-3 sm:grid-cols-4" aria-label={t.shopLocalPayFlowTitle}>
+      {labels.map((label, i) => {
+        const done = i < 2 || (i === 2 && proofUploaded);
+        const current = (!proofUploaded && i === 2) || (proofUploaded && i === 3);
+        return (
+          <li
+            key={label}
+            className={`flex gap-2 rounded-lg border px-2.5 py-2 text-xs leading-snug transition-colors duration-300 ease-out ${
+              current
+                ? "border-zinc-900 bg-zinc-50 ring-1 ring-zinc-900/20"
+                : done
+                  ? "border-emerald-200/80 bg-emerald-50/50 text-neutral-800"
+                  : "border-neutral-200 bg-white text-neutral-500"
+            }`}
+          >
+            <span
+              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold transition-colors duration-300 ease-out ${
+                done
+                  ? "bg-emerald-600 text-white"
+                  : current
+                    ? "bg-zinc-900 text-white"
+                    : "bg-neutral-200 text-neutral-600"
+              }`}
+              aria-hidden
+            >
+              {done ? "✓" : i + 1}
+            </span>
+            <span className="font-medium">{label}</span>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -167,11 +403,15 @@ export function ShopCheckout({ locale, copy, initialProducts }: ShopCheckoutProp
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofPreviewUrl, setProofPreviewUrl] = useState<string | null>(null);
   const [localPaymentData, setLocalPaymentData] = useState<LocalPaymentResponse | null>(null);
+  const [proofUploaded, setProofUploaded] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [checkoutIdempotencyKey, setCheckoutIdempotencyKey] = useState(createIdempotencyKey);
+  const [viewMode, setViewMode] = useState<ViewMode>("grid-3");
+  const [filterCats, setFilterCats] = useState<CategoryKey[]>([]);
 
   const selectedProduct = useMemo(
     () => products.find((item) => item.id === selectedProductId),
@@ -188,8 +428,44 @@ export function ShopCheckout({ locale, copy, initialProducts }: ShopCheckoutProp
     return list;
   }, [products, sort]);
 
-  const n = sortedProducts.length;
-  const rangeText = t.shopShowing.replace("{from}", n ? "1" : "0").replace("{to}", String(n)).replace("{total}", String(n));
+  const categoryOptions = useMemo(() => {
+    const s = new Set<CategoryKey>();
+    products.forEach((p) => s.add(inferCategoryKey(p)));
+    return ALL_CATEGORY_KEYS.filter((k) => s.has(k));
+  }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    if (filterCats.length === 0) {
+      return sortedProducts;
+    }
+    return sortedProducts.filter((p) => filterCats.includes(inferCategoryKey(p)));
+  }, [sortedProducts, filterCats]);
+
+  const totalCatalog = sortedProducts.length;
+  const n = filteredProducts.length;
+
+  function toggleFilter(cat: CategoryKey) {
+    setFilterCats((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
+  }
+
+  function clearFilters() {
+    setFilterCats([]);
+  }
+
+  useEffect(() => {
+    if (!proofFile) {
+      setProofPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(proofFile);
+    setProofPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [proofFile]);
+
+  useEffect(() => {
+    setProofUploaded(false);
+    setProofFile(null);
+  }, [localPaymentData?.orderId]);
 
   useEffect(() => {
     if (initialProducts.length > 0) {
@@ -223,6 +499,7 @@ export function ShopCheckout({ locale, copy, initialProducts }: ShopCheckoutProp
     setIsSubmitting(true);
     setMessage("");
     setLocalPaymentData(null);
+    setProofUploaded(false);
 
     const idempotencyKey = checkoutIdempotencyKey;
     const response = await fetch("/api/shop/checkout", {
@@ -282,64 +559,171 @@ export function ShopCheckout({ locale, copy, initialProducts }: ShopCheckoutProp
     });
 
     const data = (await response.json()) as { message?: string; proofViewUrl?: string };
-    setMessage(data.message ?? "Proof uploaded.");
     if (response.ok) {
+      setProofUploaded(true);
+      setMessage(t.shopProofReceived);
       setCheckoutIdempotencyKey(createIdempotencyKey());
+    } else {
+      setMessage(data.message ?? "Upload failed.");
     }
     setIsUploading(false);
   }
 
   const subtotalCents = selectedProduct ? selectedProduct.priceCents * quantity : 0;
   const inputClass =
-    "rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-900 shadow-sm focus:border-zinc-700 focus:outline-none focus:ring-1 focus:ring-zinc-700";
+    "rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-900 shadow-sm transition-[border-color,box-shadow] duration-200 ease-out focus:border-zinc-700 focus:outline-none focus:ring-1 focus:ring-zinc-700";
   const labelClass = "flex flex-col gap-1.5 text-sm text-neutral-700";
+
+  const selectArrowStyle = {
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23737373' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E")`,
+    backgroundRepeat: "no-repeat" as const,
+    backgroundPosition: "right 0.75rem center",
+  };
 
   return (
     <div className="mt-6 space-y-0">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
-        <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-neutral-500">{rangeText}</p>
-        <div className="w-full sm:w-56 sm:shrink-0">
-          <label className="sr-only" htmlFor="shop-sort">
-            Sort
-          </label>
-          <select
-            id="shop-sort"
-            value={sort}
-            onChange={(e) => setSort(e.target.value as SortKey)}
-            className="w-full cursor-pointer appearance-none rounded-md border border-neutral-300 bg-neutral-100/80 py-2 pl-3 pr-8 text-sm text-neutral-800 focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23737373' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E")`,
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "right 0.75rem center",
-            }}
-          >
-            <option value="default">{t.shopSortDefault}</option>
-            <option value="price-asc">{t.shopSortPriceAsc}</option>
-            <option value="price-desc">{t.shopSortPriceDesc}</option>
-          </select>
-        </div>
-      </div>
-
-      {n === 0 ? (
+      {totalCatalog === 0 ? (
         <div className="mt-10 space-y-3 py-12 text-center">
           <p className="text-sm text-neutral-600">{message || t.shopNoProducts}</p>
           <p className="text-sm text-neutral-500">{t.shopEmptyCta}</p>
         </div>
       ) : (
-        <ul className="mt-10 grid list-none grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          {sortedProducts.map((product) => (
-            <li key={product.id}>
-              <ShopProductCard
-                product={product}
-                isSelected={product.id === selectedProductId}
-                onSelect={() => setSelectedProductId(product.id)}
-                onAdd={() => handleAddToCart(product)}
-                t={t}
-                locale={locale}
-              />
-            </li>
-          ))}
-        </ul>
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
+          <div className="lg:hidden">
+            <details className="rounded-lg border border-neutral-200 bg-white px-3 transition-shadow duration-200 ease-out open:shadow-sm">
+              <summary className="cursor-pointer py-3 text-sm font-medium text-neutral-800 transition-colors duration-200 hover:text-neutral-950">
+                {locale === "zh-HK" ? "篩選" : "Filters"}
+              </summary>
+              <div className="pb-3">
+                <FilterSidebar
+                  t={t}
+                  categoryOptions={categoryOptions}
+                  filterCats={filterCats}
+                  toggleFilter={toggleFilter}
+                  clearFilters={clearFilters}
+                />
+              </div>
+            </details>
+          </div>
+
+          <aside className="hidden w-72 shrink-0 lg:block" aria-label="Filters">
+            <FilterSidebar
+              t={t}
+              categoryOptions={categoryOptions}
+              filterCats={filterCats}
+              toggleFilter={toggleFilter}
+              clearFilters={clearFilters}
+            />
+          </aside>
+
+          <div className="min-w-0 flex-1">
+            <div className="mb-6 flex flex-col gap-4 border-b border-neutral-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  aria-pressed={viewMode === "grid-3"}
+                  aria-label={t.shopViewGridLarge}
+                  onClick={() => setViewMode("grid-3")}
+                  className={`rounded-md p-2 text-neutral-600 transition-all duration-200 ease-out hover:bg-neutral-100 active:scale-95 motion-reduce:active:scale-100 ${
+                    viewMode === "grid-3" ? "bg-neutral-200 text-zinc-900" : ""
+                  }`}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={viewMode === "grid-2"}
+                  aria-label={t.shopViewGridSmall}
+                  onClick={() => setViewMode("grid-2")}
+                  className={`rounded-md p-2 text-neutral-600 transition-all duration-200 ease-out hover:bg-neutral-100 active:scale-95 motion-reduce:active:scale-100 ${
+                    viewMode === "grid-2" ? "bg-neutral-200 text-zinc-900" : ""
+                  }`}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <path d="M4 4h8v10H4V4zm10 0h6v5h-6V4zM4 15h8v5H4v-5zm10 0h6v5h-6v-5z" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={viewMode === "list"}
+                  aria-label={t.shopViewList}
+                  onClick={() => setViewMode("list")}
+                  className={`rounded-md p-2 text-neutral-600 transition-all duration-200 ease-out hover:bg-neutral-100 active:scale-95 motion-reduce:active:scale-100 ${
+                    viewMode === "list" ? "bg-neutral-200 text-zinc-900" : ""
+                  }`}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" />
+                  </svg>
+                </button>
+              </div>
+
+              <p className="text-center text-sm text-neutral-700 sm:flex-1">
+                {t.shopProductCount.replace("{n}", String(n))}
+              </p>
+
+              <div className="flex w-full flex-col gap-1 sm:w-auto sm:min-w-[200px]">
+                <label htmlFor="shop-sort" className="text-xs text-neutral-500">
+                  {t.shopSortByLabel}
+                </label>
+                <select
+                  id="shop-sort"
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as SortKey)}
+                  className="w-full cursor-pointer appearance-none rounded-md border border-neutral-300 bg-white py-2 pl-3 pr-8 text-sm text-neutral-800 transition-[border-color,box-shadow] duration-200 ease-out focus:border-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                  style={selectArrowStyle}
+                >
+                  <option value="default">{t.shopSortDefault}</option>
+                  <option value="price-asc">{t.shopSortPriceAsc}</option>
+                  <option value="price-desc">{t.shopSortPriceDesc}</option>
+                </select>
+              </div>
+            </div>
+
+            <p className="mb-4 text-[10px] font-medium uppercase tracking-[0.2em] text-neutral-400">
+              {t.shopShowing.replace("{from}", n ? "1" : "0").replace("{to}", String(n)).replace("{total}", String(n))}
+            </p>
+
+            {n === 0 ? (
+              <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50/80 px-4 py-8 text-center">
+                <p className="text-sm text-neutral-600">{t.shopNoFilterMatch}</p>
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="mt-3 text-sm font-medium text-zinc-900 underline underline-offset-2"
+                >
+                  {t.shopClearFilters}
+                </button>
+              </div>
+            ) : (
+              <ul
+                className={
+                  viewMode === "list"
+                    ? "flex list-none flex-col gap-4"
+                    : viewMode === "grid-2"
+                      ? "grid list-none grid-cols-1 gap-6 sm:grid-cols-2"
+                      : "grid list-none grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3"
+                }
+              >
+                {filteredProducts.map((product) => (
+                  <li key={product.id}>
+                    <ShopProductCard
+                      product={product}
+                      layout={viewMode === "list" ? "list" : "grid"}
+                      isSelected={product.id === selectedProductId}
+                      onSelect={() => setSelectedProductId(product.id)}
+                      onAdd={() => handleAddToCart(product)}
+                      t={t}
+                      locale={locale}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
       )}
 
       <div id="shop-checkout" className="scroll-mt-24 border-t border-neutral-200/90 bg-neutral-50/90 px-0 py-10 sm:py-12">
@@ -351,8 +735,8 @@ export function ShopCheckout({ locale, copy, initialProducts }: ShopCheckoutProp
             <p className="font-medium text-neutral-900">Order summary 訂單摘要</p>
             {selectedProduct ? (
               <p className="mt-1">
-                {locale === "zh-HK" ? selectedProduct.nameZh : selectedProduct.nameEn} × {quantity} →
-                {priceDisplay(subtotalCents)} {selectedProduct.currency.toUpperCase()}
+                {locale === "zh-HK" ? selectedProduct.nameZh : selectedProduct.nameEn} × {quantity} →{" "}
+                {priceDisplay(subtotalCents, selectedProduct.currency)}
               </p>
             ) : (
               <p className="mt-1 text-neutral-500">Select a product to see totals.</p>
@@ -374,7 +758,8 @@ export function ShopCheckout({ locale, copy, initialProducts }: ShopCheckoutProp
             >
               {products.map((product) => (
                 <option key={product.id} value={product.id}>
-                  {locale === "zh-HK" ? product.nameZh : product.nameEn} — {priceDisplay(product.priceCents)}
+                  {locale === "zh-HK" ? product.nameZh : product.nameEn} —{" "}
+                  {priceDisplay(product.priceCents, product.currency)}
                 </option>
               ))}
             </select>
@@ -430,7 +815,7 @@ export function ShopCheckout({ locale, copy, initialProducts }: ShopCheckoutProp
           </label>
 
           <button
-            className="inline-flex w-fit rounded-full bg-zinc-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-60"
+            className="inline-flex w-fit rounded-full bg-zinc-900 px-6 py-3 text-sm font-semibold text-white transition-all duration-200 ease-out hover:bg-zinc-800 active:scale-[0.98] disabled:opacity-60 motion-reduce:active:scale-100"
             type="submit"
             disabled={isSubmitting || !selectedProductId}
           >
@@ -445,33 +830,55 @@ export function ShopCheckout({ locale, copy, initialProducts }: ShopCheckoutProp
 
         {localPaymentData ? (
           <div className="mt-6 rounded-2xl border border-neutral-200 bg-white p-4 text-sm text-neutral-800 shadow-sm">
-            <p>Order ID: {localPaymentData.orderId}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+              {t.shopLocalPayFlowTitle}
+            </p>
+            <LocalPaymentStepper t={t} proofUploaded={proofUploaded} />
+
+            <p className="mt-4 font-medium text-neutral-900">Order ID: {localPaymentData.orderId}</p>
             <p>
               Amount: {(localPaymentData.amountCents / 100).toFixed(2).toUpperCase()}{" "}
               {localPaymentData.currency.toUpperCase()}
             </p>
             <p>收款帳號: {localPaymentData.paymentAccount}</p>
             <p>付款說明: {localPaymentData.paymentNote}</p>
-            <p className="mt-2 text-neutral-500">Upload key is required to attach proof. Keep this page until upload completes.</p>
+            <p className="mt-2 text-neutral-500">
+              請完成轉帳後上傳截圖。 / Complete the transfer, then upload your screenshot.
+            </p>
 
-            <form className="mt-4 flex flex-col gap-3" onSubmit={onUploadProof}>
-              <label className="flex flex-col gap-2">
-                <span>上傳付款截圖 Upload Payment Screenshot</span>
-                <input
-                  className="text-sm"
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/gif"
-                  onChange={(event) => setProofFile(event.target.files?.[0] ?? null)}
-                />
-              </label>
-              <button
-                className="inline-flex w-fit rounded-full border border-neutral-400 px-5 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-100"
-                type="submit"
-                disabled={isUploading || !proofFile}
-              >
-                {isUploading ? "Uploading..." : "Submit Payment Proof"}
-              </button>
-            </form>
+            {proofUploaded ? (
+              <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 text-sm text-amber-950">
+                {t.shopProofReviewPending}
+              </p>
+            ) : (
+              <form className="mt-4 flex flex-col gap-3" onSubmit={onUploadProof}>
+                <label className="flex flex-col gap-2">
+                  <span>上傳付款截圖 Upload payment screenshot</span>
+                  <input
+                    className="text-sm"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    onChange={(event) => setProofFile(event.target.files?.[0] ?? null)}
+                  />
+                </label>
+                {proofPreviewUrl ? (
+                  <div className="overflow-hidden rounded-lg border border-neutral-200 bg-neutral-50">
+                    <img
+                      src={proofPreviewUrl}
+                      alt={t.shopProofPreviewLabel}
+                      className="max-h-64 w-full object-contain"
+                    />
+                  </div>
+                ) : null}
+                <button
+                  className="inline-flex w-fit rounded-full border border-neutral-400 px-5 py-2 text-sm font-medium text-neutral-800 transition-all duration-200 ease-out hover:bg-neutral-100 active:scale-[0.98] disabled:opacity-50 motion-reduce:active:scale-100"
+                  type="submit"
+                  disabled={isUploading || !proofFile}
+                >
+                  {isUploading ? "Uploading…" : t.shopProofSubmit}
+                </button>
+              </form>
+            )}
           </div>
         ) : null}
       </div>

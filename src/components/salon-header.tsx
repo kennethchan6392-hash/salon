@@ -13,6 +13,7 @@ type Nav = {
   cartEmpty: string;
   locale: string;
   cartCount: number;
+  productsPath: string;
 };
 
 const iconSearch = (
@@ -72,12 +73,13 @@ export function SalonHeader(t: Nav) {
           priceList={t.priceList}
           contact={t.contact}
           shop={t.shop}
+          shopPath={t.productsPath}
           baseClass={navBase}
           activeClass={navActive}
         />
         <div className="flex items-center gap-0 sm:gap-0.5">
-          <a
-            href="#shop"
+          <Link
+            href={t.productsPath}
             className="group relative inline-flex items-center justify-center rounded-full p-2 text-zinc-800 transition hover:bg-zinc-100 hover:text-zinc-900"
             title={t.cartEmpty}
             aria-label={t.cartAria}
@@ -87,17 +89,17 @@ export function SalonHeader(t: Nav) {
               {t.cartCount}
             </span>
             <span className="sr-only">{t.cartEmpty}</span>
-          </a>
+          </Link>
           <span className="hidden h-4 w-px self-center bg-zinc-200 sm:block" />
-          <a
-            href="#shop"
+          <Link
+            href={t.productsPath}
             className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100"
             title={t.searchAria}
             aria-label={t.searchAria}
           >
             {iconSearch}
             <span className="hidden sm:inline">{t.searchLabel}</span>
-          </a>
+          </Link>
           <span className="ml-0.5 hidden h-4 w-px self-center bg-zinc-200 sm:block" />
           <div className="ml-0 flex gap-0.5 pl-0.5 text-xs sm:ml-1 sm:text-sm">
             {t.locale === "en" ? (
@@ -130,6 +132,7 @@ export function SalonHeader(t: Nav) {
           priceList={t.priceList}
           contact={t.contact}
           shop={t.shop}
+          shopPath={t.productsPath}
           baseClass={navMobile}
           activeClass={navMobileActive}
           rowClassName="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center text-xs font-medium"

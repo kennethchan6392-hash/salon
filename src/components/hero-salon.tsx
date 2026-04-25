@@ -9,12 +9,13 @@ type Props = {
   kw3: string;
   bookNow: string;
   shopNow: string;
+  shopHref: string;
   displayClassName: string;
   sansClassName: string;
 };
 
-/** Self-hosted hero (was Unsplash) — LCP-friendly with `next/image` + `priority`. */
-const HERO_PATH = "/hero/salon-hero.jpg";
+/** Store interior — same scene family as `public/ad-stock/03-salon-interior-wide.jpg`. */
+const HERO_PATH = "/ad-stock/03-salon-interior-wide.jpg";
 
 export function HeroSalon(p: Props) {
   const heroSrc = publicAssetPath(HERO_PATH);
@@ -69,7 +70,7 @@ export function HeroSalon(p: Props) {
             {p.bookNow}
           </a>
           <a
-            href="#shop"
+            href={p.shopHref}
             className="inline-flex items-center justify-center rounded-full border border-white/30 bg-transparent px-5 py-2.5 text-sm font-medium text-white transition hover:border-white/50 hover:bg-white/10"
           >
             {p.shopNow}

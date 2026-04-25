@@ -1,10 +1,12 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import type { HomeProduct } from "@/lib/shop-product";
 
-/** Fallback when Prisma is unavailable (e.g. local dev without DB). Match `staticShopCatalogForExport` + real image paths. */
-const demoProducts = [
+/**
+ * Catalog baked into HTML for `STATIC_EXPORT` (GitHub Pages): no DB, no `/api/shop/*`.
+ * Keep in sync with active rows in `prisma/seed.ts` (order: newest first, matching `createdAt desc`; omit inactive SKUs).
+ */
+export const staticShopCatalogForExport: HomeProduct[] = [
   {
-    id: "demo-perfect-spray",
+    id: "static-perfect-spray-voc55-380ml",
     nameZh: "Perfect Spray 造型噴霧 380ml",
     nameEn: "Perfect Spray 380ml",
     priceCents: 18000,
@@ -12,7 +14,7 @@ const demoProducts = [
     imageUrl: "/shop/perfect-spray-380ml.png",
   },
   {
-    id: "demo-puny-shampoo",
+    id: "static-vivaltone-puny-balancing-shampoo-750ml",
     nameZh: "VIVALTONE PUNY 平衡洗髮露 750ml",
     nameEn: "VIVALTONE PUNY Balancing Shampoo 750ml",
     priceCents: 36800,
@@ -20,7 +22,7 @@ const demoProducts = [
     imageUrl: "/shop/vivaltone-puny-balancing-shampoo-750ml.png",
   },
   {
-    id: "demo-vivltone-clay",
+    id: "static-vivltone-super-clay-100ml",
     nameZh: "VIVLTONE Super Clay 造型髮泥 100ml",
     nameEn: "VIVLTONE Super Clay 100ml",
     priceCents: 22800,
@@ -28,7 +30,7 @@ const demoProducts = [
     imageUrl: "/shop/vivltone-super-clay-100ml.png",
   },
   {
-    id: "demo-ahcmax-growth",
+    id: "static-ahcmax-hair-growth-spray-60ml",
     nameZh: "ahcMax 育髮噴霧 60ml",
     nameEn: "ahcMax Hair Growth Spray 60ml",
     priceCents: 29800,
@@ -36,7 +38,7 @@ const demoProducts = [
     imageUrl: "/shop/ahcmax-hair-growth-spray-60ml.png",
   },
   {
-    id: "demo-kerasilk-oil",
+    id: "static-kerasilk-multi-benefit-hair-oil-50ml",
     nameZh: "Kerasilk 多功能護髮油 50ml",
     nameEn: "Kerasilk Multi-Benefit Hair Oil 50ml",
     priceCents: 26800,
@@ -44,7 +46,7 @@ const demoProducts = [
     imageUrl: "/shop/kerasilk-multi-benefit-hair-oil-50ml.png",
   },
   {
-    id: "demo-kerasilk-balm",
+    id: "static-kerasilk-taming-balm-75ml",
     nameZh: "Kerasilk 順服乳霜 75ml",
     nameEn: "Kerasilk Taming Balm 75ml",
     priceCents: 26800,
@@ -52,7 +54,7 @@ const demoProducts = [
     imageUrl: "/shop/kerasilk-taming-balm-75ml.png",
   },
   {
-    id: "demo-vivltone",
+    id: "static-vivltone-super-spray-380ml",
     nameZh: "VIVLTONE Super Spray 380ml",
     nameEn: "VIVLTONE Super Spray 380ml",
     priceCents: 18000,
@@ -60,35 +62,3 @@ const demoProducts = [
     imageUrl: "/shop/vivltone-super-spray-380ml.png",
   },
 ];
-
-export async function GET() {
-  const isProd = process.env.NODE_ENV === "production";
-
-  try {
-    const products = await prisma.product.findMany({
-      where: { isActive: true },
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        nameZh: true,
-        nameEn: true,
-        priceCents: true,
-        currency: true,
-        imageUrl: true,
-      },
-    });
-    return NextResponse.json(
-      { products },
-      { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" } },
-    );
-  } catch (error) {
-    console.error("[shop/products]", error);
-    if (isProd) {
-      return NextResponse.json(
-        { message: "Product catalog is temporarily unavailable." },
-        { status: 503 },
-      );
-    }
-    return NextResponse.json({ products: demoProducts }, { status: 200 });
-  }
-}

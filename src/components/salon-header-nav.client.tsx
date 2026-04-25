@@ -25,11 +25,17 @@ type LinkProps = {
   className: string;
   classNameActive: string;
   children: React.ReactNode;
+  /** Only for the home path: active when there is no #section in the URL. */
+  activeOnlyWithoutHash?: boolean;
 };
+
+function normalizePath(path: string) {
+  return path.length > 1 && path.endsWith("/") ? path.slice(0, -1) : path;
+}
 
 function HashOrLocaleLink(p: LinkProps) {
   const hash = useWindowHash();
-  const pathname = usePathname();
+  const pathname = normalizePath(usePathname());
   if (p.href.startsWith("#")) {
     const active = hash === p.href;
     return (
@@ -41,13 +47,27 @@ function HashOrLocaleLink(p: LinkProps) {
       </a>
     );
   }
-  const isHome = pathname === p.href;
-  const homeActive = isHome && (hash === "" || hash === "#");
+
+  const hashIdx = p.href.indexOf("#");
+  if (hashIdx !== -1) {
+    const pathPart = normalizePath(p.href.slice(0, hashIdx));
+    const frag = p.href.slice(hashIdx);
+    const pathMatches = pathname === pathPart;
+    const active = pathMatches && hash === frag;
+    return (
+      <Link href={p.href} className={active ? p.classNameActive : p.className}>
+        {p.children}
+      </Link>
+    );
+  }
+
+  const target = normalizePath(p.href);
+  const pathMatches = pathname === target;
+  const active = p.activeOnlyWithoutHash
+    ? pathMatches && (hash === "" || hash === "#")
+    : pathMatches;
   return (
-    <Link
-      href={p.href}
-      className={homeActive ? p.classNameActive : p.className}
-    >
+    <Link href={p.href} className={active ? p.classNameActive : p.className}>
       {p.children}
     </Link>
   );
@@ -59,6 +79,8 @@ type Nav = {
   priceList: string;
   contact: string;
   shop: string;
+  /** Product / shop route (not a hash). */
+  shopPath: string;
   baseClass: string;
   activeClass: string;
 };
@@ -78,25 +100,26 @@ export function SalonHeaderPrimaryNav(t: Nav) {
         href={homePath}
         className={t.baseClass}
         classNameActive={t.activeClass}
+        activeOnlyWithoutHash
       >
         {t.home}
       </HashOrLocaleLink>
       <HashOrLocaleLink
-        href="#price-list"
+        href={`${homePath}#price-list`}
         className={t.baseClass}
         classNameActive={t.activeClass}
       >
         {t.priceList}
       </HashOrLocaleLink>
       <HashOrLocaleLink
-        href="#contact"
+        href={`${homePath}#contact`}
         className={t.baseClass}
         classNameActive={t.activeClass}
       >
         {t.contact}
       </HashOrLocaleLink>
       <HashOrLocaleLink
-        href="#shop"
+        href={t.shopPath}
         className={t.baseClass}
         classNameActive={t.activeClass}
       >
@@ -114,25 +137,26 @@ export function SalonHeaderMobileNav(t: Nav & { rowClassName: string }) {
         href={homePath}
         className={t.baseClass}
         classNameActive={t.activeClass}
+        activeOnlyWithoutHash
       >
         {t.home}
       </HashOrLocaleLink>
       <HashOrLocaleLink
-        href="#price-list"
+        href={`${homePath}#price-list`}
         className={t.baseClass}
         classNameActive={t.activeClass}
       >
         {t.priceList}
       </HashOrLocaleLink>
       <HashOrLocaleLink
-        href="#contact"
+        href={`${homePath}#contact`}
         className={t.baseClass}
         classNameActive={t.activeClass}
       >
         {t.contact}
       </HashOrLocaleLink>
       <HashOrLocaleLink
-        href="#shop"
+        href={t.shopPath}
         className={t.baseClass}
         classNameActive={t.activeClass}
       >

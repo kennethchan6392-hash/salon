@@ -7,6 +7,12 @@ html {
   color-scheme: light;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
