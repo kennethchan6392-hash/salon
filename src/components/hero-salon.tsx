@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { publicAssetPath } from "@/lib/public-asset-path";
 
 type Props = {
   brandTitle: string;
@@ -13,15 +14,16 @@ type Props = {
 };
 
 /** Self-hosted hero (was Unsplash) — LCP-friendly with `next/image` + `priority`. */
-const HERO_SRC = "/hero/salon-hero.jpg";
+const HERO_PATH = "/hero/salon-hero.jpg";
 
 export function HeroSalon(p: Props) {
+  const heroSrc = publicAssetPath(HERO_PATH);
   return (
     <section className="relative isolate min-h-[min(72vh,720px)] w-full overflow-hidden">
       <div className="pointer-events-none absolute inset-0 -z-10">
         {/* Bypass `/_next/image`: Safari on localhost often skips painting optimized hero URLs; `/hero/…` from `public/` is direct. */}
         <Image
-          src={HERO_SRC}
+          src={heroSrc}
           alt=""
           fill
           priority
