@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SalonHeaderMobileNav, SalonHeaderPrimaryNav } from "./salon-header-nav.client";
 
 type Nav = {
   brandName: string;
@@ -7,6 +8,7 @@ type Nav = {
   contact: string;
   shop: string;
   searchAria: string;
+  searchLabel: string;
   cartAria: string;
   cartEmpty: string;
   locale: string;
@@ -47,56 +49,57 @@ const iconCart = (
   </svg>
 );
 
+const navBase =
+  "rounded-md px-2.5 py-1.5 text-zinc-800 transition hover:bg-zinc-100/80";
+const navActive = "rounded-md px-2.5 py-1.5 text-zinc-900 underline decoration-zinc-900 underline-offset-4";
+
+const navMobile = "text-zinc-800 transition hover:underline";
+const navMobileActive = "text-zinc-900 font-semibold underline decoration-zinc-900 underline-offset-2";
+
 export function SalonHeader(t: Nav) {
   return (
-    <header className="sticky top-0 z-40 border-b border-zinc-200/80 bg-white/90 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-zinc-200/80 bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-3.5">
         <Link
           href={`/${t.locale}`}
-          className="font-[family-name:var(--font-display)] text-lg tracking-tight text-zinc-900 sm:text-xl"
+          className="shrink-0 font-[family-name:var(--font-display)] text-lg font-semibold leading-tight tracking-tight text-zinc-900 sm:text-xl"
         >
           {t.brandName}
         </Link>
-        <nav
-          className="hidden items-center gap-1 text-sm font-medium text-zinc-700 md:flex"
-          aria-label="Primary"
-        >
-          <Link href={`/${t.locale}`} className="rounded-md px-2.5 py-1.5 transition hover:bg-zinc-100">
-            {t.home}
-          </Link>
-          <a href="#price-list" className="rounded-md px-2.5 py-1.5 transition hover:bg-zinc-100">
-            {t.priceList}
-          </a>
-          <a href="#contact" className="rounded-md px-2.5 py-1.5 transition hover:bg-zinc-100">
-            {t.contact}
-          </a>
-          <a href="#shop" className="rounded-md px-2.5 py-1.5 transition hover:bg-zinc-100">
-            {t.shop}
-          </a>
-        </nav>
-        <div className="flex items-center gap-0.5 sm:gap-1">
+        <SalonHeaderPrimaryNav
+          locale={t.locale}
+          home={t.home}
+          priceList={t.priceList}
+          contact={t.contact}
+          shop={t.shop}
+          baseClass={navBase}
+          activeClass={navActive}
+        />
+        <div className="flex items-center gap-0 sm:gap-0.5">
           <a
             href="#shop"
-            className="rounded-full p-2 text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900"
-            title={t.searchAria}
-            aria-label={t.searchAria}
-          >
-            {iconSearch}
-          </a>
-          <a
-            href="#shop"
-            className="group relative inline-flex items-center justify-center rounded-full p-2 text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900"
+            className="group relative inline-flex items-center justify-center rounded-full p-2 text-zinc-800 transition hover:bg-zinc-100 hover:text-zinc-900"
             title={t.cartEmpty}
             aria-label={t.cartAria}
           >
             {iconCart}
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-amber-800 px-0.5 text-[10px] font-semibold text-white">
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-zinc-900 px-0.5 text-[10px] font-semibold text-white">
               {t.cartCount}
             </span>
             <span className="sr-only">{t.cartEmpty}</span>
           </a>
-          <span className="ml-0.5 hidden h-5 w-px self-center bg-zinc-200 sm:block" />
-          <div className="ml-0 flex gap-0.5 text-sm sm:ml-1">
+          <span className="hidden h-4 w-px self-center bg-zinc-200 sm:block" />
+          <a
+            href="#shop"
+            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100"
+            title={t.searchAria}
+            aria-label={t.searchAria}
+          >
+            {iconSearch}
+            <span className="hidden sm:inline">{t.searchLabel}</span>
+          </a>
+          <span className="ml-0.5 hidden h-4 w-px self-center bg-zinc-200 sm:block" />
+          <div className="ml-0 flex gap-0.5 pl-0.5 text-xs sm:ml-1 sm:text-sm">
             {t.locale === "en" ? (
               <span className="rounded-md bg-zinc-100 px-2 py-1 font-medium text-zinc-900">EN</span>
             ) : (
@@ -120,15 +123,17 @@ export function SalonHeader(t: Nav) {
           </div>
         </div>
       </div>
-      <div className="border-t border-zinc-100 bg-zinc-50/80 px-4 py-1.5 md:hidden">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center text-xs font-medium text-zinc-600">
-          <Link href={`/${t.locale}`} className="text-zinc-800">
-            {t.home}
-          </Link>
-          <a href="#price-list">{t.priceList}</a>
-          <a href="#contact">{t.contact}</a>
-          <a href="#shop">{t.shop}</a>
-        </div>
+      <div className="border-t border-zinc-100/90 bg-zinc-50/90 px-4 py-1.5 md:hidden">
+        <SalonHeaderMobileNav
+          locale={t.locale}
+          home={t.home}
+          priceList={t.priceList}
+          contact={t.contact}
+          shop={t.shop}
+          baseClass={navMobile}
+          activeClass={navMobileActive}
+          rowClassName="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center text-xs font-medium"
+        />
       </div>
     </header>
   );

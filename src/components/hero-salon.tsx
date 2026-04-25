@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 type Props = {
   brandTitle: string;
   brandSubtitle: string;
@@ -10,21 +12,36 @@ type Props = {
   sansClassName: string;
 };
 
-const HERO_PLACEHOLDER =
-  "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1920&q=80";
+/** Self-hosted hero (was Unsplash) — LCP-friendly with `next/image` + `priority`. */
+const HERO_SRC = "/hero/salon-hero.jpg";
 
 export function HeroSalon(p: Props) {
   return (
     <section className="relative isolate min-h-[min(72vh,720px)] w-full overflow-hidden">
-      <div
-        className="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center"
-        style={{
-          backgroundImage: `linear-gradient(120deg, rgba(24, 24, 27, 0.88) 0%, rgba(24, 24, 27, 0.5) 45%, rgba(24, 24, 27, 0.78) 100%), url(${HERO_PLACEHOLDER})`,
-        }}
-        aria-hidden
-      />
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        {/* Bypass `/_next/image`: Safari on localhost often skips painting optimized hero URLs; `/hero/…` from `public/` is direct. */}
+        <Image
+          src={HERO_SRC}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          unoptimized
+          className="object-cover"
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "linear-gradient(120deg, rgba(24, 24, 27, 0.88) 0%, rgba(24, 24, 27, 0.5) 45%, rgba(24, 24, 27, 0.78) 100%)",
+          }}
+          aria-hidden
+        />
+      </div>
       <div className="mx-auto flex min-h-[min(72vh,720px)] max-w-6xl flex-col justify-center gap-6 px-4 py-20 sm:px-6 sm:py-24">
-        <p className={`${p.displayClassName} text-3xl text-white sm:text-4xl md:text-5xl`}>
+        <p
+          className={`${p.displayClassName} text-3xl font-semibold text-white sm:text-4xl md:text-5xl`}
+        >
           {p.brandTitle}
         </p>
         <p className={`${p.sansClassName} max-w-2xl text-sm leading-relaxed text-zinc-200 sm:text-base`}>

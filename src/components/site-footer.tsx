@@ -1,12 +1,25 @@
 import { buildTelHref } from "@/lib/tel-href";
 
+const iconFacebook = (
+  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <path d="M9.101 23.127V12.896H5.637v-4.09H9.1V6.149c0-3.476 1.897-5.406 5.476-5.406 1.477 0 2.724.101 3.091.148v3.587h-2.122c-1.662 0-1.983.79-1.983 1.951v2.467h4.148l-.556 4.09h-3.592v10.231H9.101z" />
+  </svg>
+);
+
+const iconInstagram = (
+  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <path d="M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9A5.5 5.5 0 0 1 16.5 22h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2zm0 1.5A4 4 0 0 0 3.5 7.5v9a4 4 0 0 0 4 4h9a4 4 0 0 0 4-4v-9a4 4 0 0 0-4-4h-9zm4.5 2.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9zm0 1.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6zm4.5-2.25a.9.9 0 1 0 0 1.8.9.9 0 0 0 0-1.8z" />
+  </svg>
+);
+
 type FooterProps = {
-  displayClassName: string;
   sansClassName: string;
   tagline: string;
-  addressLabel: string;
-  phoneLabel: string;
-  emailLabel: string;
+  logoPrimary: string;
+  logoSub: string;
+  contactHeading: string;
+  emailLinePrefix: string;
+  telLinePrefix: string;
   whatsappLabel: string;
   address: string;
   phone: string;
@@ -15,59 +28,98 @@ type FooterProps = {
   hoursDetail: string;
   whatsappUrl: string | null;
   waDisplay: string;
-  navTitle: string;
+  facebookUrl: string | null;
+  instagramUrl: string | null;
 };
 
 export function SiteFooter(p: FooterProps) {
   const telHref = buildTelHref(p.phone);
   const hasWhatsapp = Boolean(p.whatsappUrl);
+  const phoneDisplay = `+853 ${p.phone}`;
+
   return (
     <footer
       id="contact"
-      className="border-t border-zinc-200/80 bg-zinc-100/90 text-zinc-800"
+      className="border-t border-white/10 bg-black text-white"
     >
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-        <p
-          className={`${p.displayClassName} text-center text-xl leading-relaxed text-zinc-800 sm:text-2xl max-w-3xl mx-auto`}
-        >
-          {p.tagline}
-        </p>
-        <div
-          className={`${p.sansClassName} mt-10 grid gap-8 border-t border-zinc-200/80 pt-10 sm:grid-cols-2 md:grid-cols-3`}
-        >
+      <div className={`${p.sansClassName} mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20`}>
+        <div className="grid gap-12 sm:gap-10 md:grid-cols-3 md:gap-8">
           <div>
-            <h3 className="text-sm font-semibold text-zinc-500">{p.navTitle}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-800">{p.address}</p>
+            <p className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{p.logoPrimary}</p>
+            <p className="mt-1 text-xs font-medium uppercase tracking-[0.25em] text-zinc-400">
+              {p.logoSub}
+            </p>
+            <p className="mt-8 max-w-sm text-xs font-medium uppercase leading-relaxed tracking-wider text-zinc-300">
+              {p.tagline}
+            </p>
+            {(p.facebookUrl || p.instagramUrl) && (
+              <div className="mt-8 flex items-center gap-4 text-white">
+                {p.facebookUrl ? (
+                  <a
+                    href={p.facebookUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="transition hover:opacity-80"
+                    aria-label="Facebook"
+                  >
+                    {iconFacebook}
+                  </a>
+                ) : null}
+                {p.facebookUrl && p.instagramUrl ? (
+                  <span className="h-4 w-px bg-white/30" aria-hidden />
+                ) : null}
+                {p.instagramUrl ? (
+                  <a
+                    href={p.instagramUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="transition hover:opacity-80"
+                    aria-label="Instagram"
+                  >
+                    {iconInstagram}
+                  </a>
+                ) : null}
+              </div>
+            )}
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-zinc-500">{p.emailLabel}</h3>
-            <a
-              className="mt-2 block text-sm text-zinc-800 underline decoration-zinc-300 underline-offset-2 transition hover:decoration-zinc-500"
-              href={`mailto:${p.email}`}
-            >
-              {p.email}
-            </a>
-            <h3 className="mt-4 text-sm font-semibold text-zinc-500">{p.phoneLabel}</h3>
-            <a
-              className="mt-1 block text-sm text-zinc-800 underline decoration-zinc-300 underline-offset-2 transition hover:decoration-zinc-500"
-              href={telHref}
-            >
-              {p.phone}
-            </a>
-            {hasWhatsapp && p.whatsappUrl ? (
+            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-white">{p.contactHeading}</h3>
+            <p className="mt-5 text-sm leading-relaxed text-zinc-300">{p.address}</p>
+            <p className="mt-4 text-sm text-zinc-300">
+              <span className="text-zinc-500">{p.emailLinePrefix}</span>{" "}
               <a
-                className="mt-2 block text-sm text-amber-900 underline decoration-amber-300 underline-offset-2 transition hover:decoration-amber-500"
-                href={p.whatsappUrl}
-                target="_blank"
-                rel="noreferrer"
+                className="text-white underline decoration-white/30 underline-offset-2 transition hover:decoration-white"
+                href={`mailto:${p.email}`}
               >
-                {p.whatsappLabel}: {p.waDisplay}
+                {p.email}
               </a>
+            </p>
+            <p className="mt-2 text-sm text-zinc-300">
+              <span className="text-zinc-500">{p.telLinePrefix}</span>{" "}
+              <a
+                className="text-white underline decoration-white/30 underline-offset-2 transition hover:decoration-white"
+                href={telHref}
+              >
+                {phoneDisplay}
+              </a>
+            </p>
+            {hasWhatsapp && p.whatsappUrl ? (
+              <p className="mt-2 text-sm text-zinc-300">
+                <span className="text-zinc-500">{p.whatsappLabel}:</span>{" "}
+                <a
+                  className="text-emerald-400 underline decoration-emerald-400/40 underline-offset-2 transition hover:decoration-emerald-300"
+                  href={p.whatsappUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {p.waDisplay}
+                </a>
+              </p>
             ) : null}
           </div>
-          <div className="sm:col-span-2 md:col-span-1">
-            <h3 className="text-sm font-semibold text-zinc-500">{p.hoursTitle}</h3>
-            <ul className="mt-2 space-y-1 text-sm text-zinc-800 whitespace-pre-line">
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-white">{p.hoursTitle}</h3>
+            <ul className="mt-5 space-y-1.5 text-sm leading-relaxed text-zinc-300 whitespace-pre-line">
               {p.hoursDetail.split("\n").map((line, i) => (
                 <li key={`${i}-${line}`}>{line}</li>
               ))}

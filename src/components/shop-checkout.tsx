@@ -1,8 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
-import type { Messages } from "@/lib/i18n";
+import type { ShopCheckoutCopy } from "@/lib/shop-checkout-copy";
 
 type Product = {
   id: string;
@@ -14,6 +13,8 @@ type Product = {
 
 type ShopCheckoutProps = {
   locale: string;
+  /** Server-picked copy only — keeps full `messages/*.json` off the client bundle. */
+  copy: ShopCheckoutCopy;
   initialProducts: Product[];
 };
 
@@ -65,7 +66,7 @@ function inferCategoryKey(p: { nameZh: string; nameEn: string }): CategoryKey {
   return "uncategorized";
 }
 
-function categoryText(t: Messages, key: CategoryKey) {
+function categoryText(t: ShopCheckoutCopy, key: CategoryKey) {
   switch (key) {
     case "shampoo":
       return t.catShampoo;
@@ -119,7 +120,7 @@ function ShopProductCard({
   isSelected: boolean;
   onSelect: () => void;
   onAdd: () => void;
-  t: Messages;
+  t: ShopCheckoutCopy;
   locale: string;
 }) {
   const cat = inferCategoryKey(product);
@@ -140,7 +141,7 @@ function ShopProductCard({
         <p className="mt-3 text-[10px] font-medium uppercase tracking-[0.2em] text-neutral-400">
           {categoryText(t, cat)}
         </p>
-        <h3 className="mt-2 text-sm font-bold uppercase leading-tight text-neutral-900 sm:text-sm">
+        <h3 className="mt-2 text-sm font-semibold uppercase leading-tight text-neutral-900 sm:text-sm">
           {formatProductTitle(product, locale)}
         </h3>
         <p className="mt-1 text-sm text-neutral-800">{priceDisplay(product.priceCents)}</p>
@@ -156,8 +157,8 @@ function ShopProductCard({
   );
 }
 
-export function ShopCheckout({ locale, initialProducts }: ShopCheckoutProps) {
-  const t = getMessages((isSupportedLocale(locale) ? locale : "en") as Locale);
+export function ShopCheckout({ locale, copy, initialProducts }: ShopCheckoutProps) {
+  const t = copy;
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [selectedProductId, setSelectedProductId] = useState(initialProducts[0]?.id ?? "");
   const [sort, setSort] = useState<SortKey>("default");

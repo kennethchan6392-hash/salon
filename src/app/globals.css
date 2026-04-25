@@ -1,4 +1,5 @@
-@import "tailwindcss";
+/* Relative import avoids wrong resolve context (e.g. ~/Desktop) with @import "tailwindcss" */
+@import "../../node_modules/tailwindcss/index.css";
 
 /* Keep the marketing site consistently light: OS “dark mode” was flipping body to near-black
    and light gray text, which could make unstyled or inherited text hard to read. */

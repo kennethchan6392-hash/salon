@@ -1,4 +1,9 @@
+import type { Locale } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
+
+function slotLocaleTag(locale: Locale): string {
+  return locale === "zh-HK" ? "zh-HK" : "en-HK";
+}
 
 export type HomeProduct = {
   id: string;
@@ -31,7 +36,10 @@ export async function getHomeProducts(): Promise<HomeProduct[]> {
   }
 }
 
-export async function getHomeSlotsForService(serviceKey: string): Promise<HomeSlot[]> {
+export async function getHomeSlotsForService(
+  locale: Locale,
+  serviceKey: string,
+): Promise<HomeSlot[]> {
   try {
     const rows = await prisma.availabilitySlot.findMany({
       where: {
@@ -42,9 +50,10 @@ export async function getHomeSlotsForService(serviceKey: string): Promise<HomeSl
       orderBy: { startsAt: "asc" },
       take: 12,
     });
+    const tag = slotLocaleTag(locale);
     return rows.map((slot) => ({
       id: slot.id,
-      label: slot.startsAt.toLocaleString("en-HK", {
+      label: slot.startsAt.toLocaleString(tag, {
         month: "short",
         day: "numeric",
         hour: "2-digit",
