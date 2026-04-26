@@ -19,6 +19,9 @@ type ShopCheckoutProps = {
   /** Server-picked copy only — keeps full `messages/*.json` off the client bundle. */
   copy: ShopCheckoutCopy;
   initialProducts: Product[];
+  /** Full `https://wa.me/...` URL — used when `NEXT_PUBLIC_STATIC_EXPORT` (GitHub Pages). */
+  orderHelpWhatsappUrl?: string | null;
+  orderHelpEmail?: string;
 };
 
 type PaymentMethod = "mpay" | "boc" | "uepay" | "bank_transfer" | "stripe_card";
@@ -52,6 +55,60 @@ function createIdempotencyKey() {
     return globalThis.crypto.randomUUID();
   }
   return `idemp_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function appendTextToWhatsappUrl(base: string, text: string): string {
+  try {
+    const u = new URL(base);
+    u.searchParams.set("text", text);
+    return u.toString();
+  } catch {
+    const sep = base.includes("?") ? "&" : "?";
+    return `${base}${sep}text=${encodeURIComponent(text)}`;
+  }
+}
+
+function buildStaticOrderLines(
+  locale: string,
+  product: Product | undefined,
+  quantity: number,
+  customerName: string,
+  customerEmail: string,
+  totalFormatted: string,
+): string {
+  const pname = product ? (locale === "zh-HK" ? product.nameZh : product.nameEn) : "—";
+  if (locale === "zh-HK") {
+    return [
+      "【藝能網店訂購】",
+      `商品：${pname} × ${quantity}`,
+      `金額：${totalFormatted}`,
+      customerName.trim() ? `稱呼：${customerName.trim()}` : "",
+      customerEmail.trim() ? `電郵：${customerEmail.trim()}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+  return [
+    "[n_nsalon web order]",
+    `Item: ${pname} × ${quantity}`,
+    `Total: ${totalFormatted}`,
+    customerName.trim() ? `Name: ${customerName.trim()}` : "",
+    customerEmail.trim() ? `Email: ${customerEmail.trim()}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+async function parseJsonResponse(response: Response): Promise<Record<string, unknown>> {
+  const raw = await response.text();
+  if (!raw.trim()) {
+    return {};
+  }
+  try {
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return { message: raw.slice(0, 240) };
+  }
 }
 
 function formatProductTitle(p: Product, locale: string) {
@@ -393,8 +450,15 @@ function LocalPaymentStepper({
   );
 }
 
-export function ShopCheckout({ locale, copy, initialProducts }: ShopCheckoutProps) {
+export function ShopCheckout({
+  locale,
+  copy,
+  initialProducts,
+  orderHelpWhatsappUrl = null,
+  orderHelpEmail,
+}: ShopCheckoutProps) {
   const t = copy;
+  const isStaticSite = process.env.NEXT_PUBLIC_STATIC_EXPORT === "1";
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [selectedProductId, setSelectedProductId] = useState(initialProducts[0]?.id ?? "");
   const [sort, setSort] = useState<SortKey>("default");
@@ -472,14 +536,18 @@ export function ShopCheckout({ locale, copy, initialProducts }: ShopCheckoutProp
       return;
     }
     async function loadProducts() {
-      const response = await fetch("/api/shop/products");
-      const data = (await response.json()) as { products?: Product[]; message?: string };
-      if (data.products) {
-        setProducts(data.products);
-        setSelectedProductId(data.products[0]?.id ?? "");
-        return;
+      try {
+        const response = await fetch("/api/shop/products");
+        const data = (await parseJsonResponse(response)) as { products?: Product[]; message?: string };
+        if (data.products) {
+          setProducts(data.products);
+          setSelectedProductId(data.products[0]?.id ?? "");
+          return;
+        }
+        setMessage(data.message ?? "Failed to load products.");
+      } catch {
+        setMessage("Could not load products. Check your connection or use the catalog above.");
       }
-      setMessage(data.message ?? "Failed to load products.");
     }
     void loadProducts();
   }, [initialProducts.length]);
@@ -496,48 +564,53 @@ export function ShopCheckout({ locale, copy, initialProducts }: ShopCheckoutProp
 
   async function onCheckout(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isStaticSite) {
+      return;
+    }
     setIsSubmitting(true);
     setMessage("");
     setLocalPaymentData(null);
     setProofUploaded(false);
 
     const idempotencyKey = checkoutIdempotencyKey;
-    const response = await fetch("/api/shop/checkout", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Idempotency-Key": idempotencyKey,
-      },
-      body: JSON.stringify({
-        locale,
-        paymentMethod,
-        customerName,
-        customerEmail,
-        items: [{ productId: selectedProductId, quantity }],
-      }),
-    });
+    try {
+      const response = await fetch("/api/shop/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey,
+        },
+        body: JSON.stringify({
+          locale,
+          paymentMethod,
+          customerName,
+          customerEmail,
+          items: [{ productId: selectedProductId, quantity }],
+        }),
+      });
 
-    const data = (await response.json()) as
-      | { checkoutUrl?: string; orderId?: string; message?: string; uploadToken?: string }
-      | LocalPaymentResponse;
+      const data = (await parseJsonResponse(response)) as Record<string, unknown>;
 
-    if (response.ok && "uploadToken" in data && data.uploadToken) {
-      setLocalPaymentData(data as LocalPaymentResponse);
-      setMessage((data as LocalPaymentResponse).message ?? "");
+      if (response.ok && typeof data.uploadToken === "string" && data.uploadToken) {
+        setLocalPaymentData(data as unknown as LocalPaymentResponse);
+        setMessage(typeof data.message === "string" ? data.message : "");
+        return;
+      }
+
+      if (typeof data.checkoutUrl === "string" && data.checkoutUrl) {
+        setCheckoutIdempotencyKey(createIdempotencyKey());
+        window.location.href = data.checkoutUrl;
+        return;
+      }
+
+      setMessage(
+        typeof data.message === "string" ? data.message : "Checkout is unavailable. Please try again.",
+      );
+    } catch {
+      setMessage("Network error — checkout did not complete. Please try again or contact the salon.");
+    } finally {
       setIsSubmitting(false);
-      return;
     }
-
-    if (data && "checkoutUrl" in data && data.checkoutUrl) {
-      setCheckoutIdempotencyKey(createIdempotencyKey());
-      window.location.href = data.checkoutUrl;
-      return;
-    }
-
-    setMessage(
-      (data as { message?: string })?.message ?? "Checkout is unavailable. Please try again.",
-    );
-    setIsSubmitting(false);
   }
 
   async function onUploadProof(event: FormEvent<HTMLFormElement>) {
@@ -558,7 +631,7 @@ export function ShopCheckout({ locale, copy, initialProducts }: ShopCheckoutProp
       body: formData,
     });
 
-    const data = (await response.json()) as { message?: string; proofViewUrl?: string };
+    const data = (await parseJsonResponse(response)) as { message?: string; proofViewUrl?: string };
     if (response.ok) {
       setProofUploaded(true);
       setMessage(t.shopProofReceived);
@@ -570,6 +643,29 @@ export function ShopCheckout({ locale, copy, initialProducts }: ShopCheckoutProp
   }
 
   const subtotalCents = selectedProduct ? selectedProduct.priceCents * quantity : 0;
+
+  function openStaticWhatsappOrder() {
+    if (!orderHelpWhatsappUrl || !selectedProduct) {
+      return;
+    }
+    const totalLine = priceDisplay(subtotalCents, selectedProduct.currency);
+    const text = buildStaticOrderLines(locale, selectedProduct, quantity, customerName, customerEmail, totalLine);
+    window.open(appendTextToWhatsappUrl(orderHelpWhatsappUrl, text), "_blank", "noopener,noreferrer");
+  }
+
+  const staticMailtoHref =
+    orderHelpEmail && selectedProduct
+      ? `mailto:${orderHelpEmail}?subject=${encodeURIComponent(locale === "zh-HK" ? "藝能網店訂購" : "n_nsalon order")}&body=${encodeURIComponent(
+          buildStaticOrderLines(
+            locale,
+            selectedProduct,
+            quantity,
+            customerName,
+            customerEmail,
+            priceDisplay(subtotalCents, selectedProduct.currency),
+          ),
+        )}`
+      : null;
   const inputClass =
     "rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-900 shadow-sm transition-[border-color,box-shadow] duration-200 ease-out focus:border-zinc-700 focus:outline-none focus:ring-1 focus:ring-zinc-700";
   const labelClass = "flex flex-col gap-1.5 text-sm text-neutral-700";
@@ -741,13 +837,19 @@ export function ShopCheckout({ locale, copy, initialProducts }: ShopCheckoutProp
             ) : (
               <p className="mt-1 text-neutral-500">Select a product to see totals.</p>
             )}
-            {paymentMethod !== "stripe_card" ? (
+            {!isStaticSite && paymentMethod !== "stripe_card" ? (
               <p className="mt-2 text-sm text-neutral-500">
                 本地支付需人工審核，上傳截圖後一般於辦公時間內處理。 / Local bank transfers are verified manually
                 during business hours.
               </p>
             ) : null}
           </div>
+
+          {isStaticSite ? (
+            <div className="md:col-span-2 rounded-lg border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-950">
+              {t.shopStaticCheckoutNote}
+            </div>
+          ) : null}
 
           <label className={`${labelClass} md:col-span-2`}>
             <span>Product</span>
@@ -765,22 +867,24 @@ export function ShopCheckout({ locale, copy, initialProducts }: ShopCheckoutProp
             </select>
           </label>
 
-          <label className={labelClass}>
-            <span>Payment</span>
-            <select
-              className={inputClass}
-              value={paymentMethod}
-              onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
-            >
-              {paymentOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          {!isStaticSite ? (
+            <label className={labelClass}>
+              <span>Payment</span>
+              <select
+                className={inputClass}
+                value={paymentMethod}
+                onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
+              >
+                {paymentOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
 
-          <label className={labelClass}>
+          <label className={`${labelClass} ${isStaticSite ? "md:col-span-2" : ""}`}>
             <span>Quantity</span>
             <input
               className={inputClass}
@@ -796,10 +900,10 @@ export function ShopCheckout({ locale, copy, initialProducts }: ShopCheckoutProp
             <span>Name</span>
             <input
               className={inputClass}
-              required
+              required={!isStaticSite}
               value={customerName}
               onChange={(event) => setCustomerName(event.target.value)}
-              minLength={2}
+              minLength={isStaticSite ? undefined : 2}
             />
           </label>
 
@@ -808,23 +912,53 @@ export function ShopCheckout({ locale, copy, initialProducts }: ShopCheckoutProp
             <input
               className={inputClass}
               type="email"
-              required
+              required={!isStaticSite}
               value={customerEmail}
               onChange={(event) => setCustomerEmail(event.target.value)}
             />
           </label>
 
-          <button
-            className="inline-flex w-fit rounded-full bg-zinc-900 px-6 py-3 text-sm font-semibold text-white transition-all duration-200 ease-out hover:bg-zinc-800 active:scale-[0.98] disabled:opacity-60 motion-reduce:active:scale-100"
-            type="submit"
-            disabled={isSubmitting || !selectedProductId}
-          >
-            {isSubmitting
-              ? "Processing..."
-              : paymentMethod === "stripe_card"
-                ? "Pay with Visa / Mastercard"
-                : "Create Local Payment Order"}
-          </button>
+          {isStaticSite ? (
+            <div className="flex flex-col gap-3 md:col-span-2 sm:flex-row sm:flex-wrap">
+              {orderHelpWhatsappUrl ? (
+                <button
+                  type="button"
+                  className="inline-flex w-fit rounded-full bg-zinc-900 px-6 py-3 text-sm font-semibold text-white transition-all duration-200 ease-out hover:bg-zinc-800 active:scale-[0.98] disabled:opacity-50 motion-reduce:active:scale-100"
+                  disabled={!selectedProductId}
+                  onClick={openStaticWhatsappOrder}
+                >
+                  {t.shopWhatsappOrder}
+                </button>
+              ) : null}
+              {staticMailtoHref ? (
+                <a
+                  href={staticMailtoHref}
+                  className="inline-flex w-fit items-center justify-center rounded-full border border-zinc-400 bg-white px-6 py-3 text-sm font-semibold text-zinc-900 transition-all duration-200 ease-out hover:bg-zinc-50"
+                >
+                  {t.shopMailOrder}
+                </a>
+              ) : null}
+              {!orderHelpWhatsappUrl && !orderHelpEmail ? (
+                <p className="text-sm text-neutral-600">
+                  {locale === "zh-HK"
+                    ? "請在網站設定 WhatsApp 或電郵以便落單。"
+                    : "Set NEXT_PUBLIC_WHATSAPP_URL or salon email for order links."}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <button
+              className="inline-flex w-fit rounded-full bg-zinc-900 px-6 py-3 text-sm font-semibold text-white transition-all duration-200 ease-out hover:bg-zinc-800 active:scale-[0.98] disabled:opacity-60 motion-reduce:active:scale-100"
+              type="submit"
+              disabled={isSubmitting || !selectedProductId}
+            >
+              {isSubmitting
+                ? "Processing..."
+                : paymentMethod === "stripe_card"
+                  ? "Pay with Visa / Mastercard"
+                  : "Create Local Payment Order"}
+            </button>
+          )}
           {message ? <p className="text-sm text-neutral-600 md:col-span-2">{message}</p> : null}
         </form>
 

@@ -192,6 +192,8 @@ export default async function ProductsPage({ params }: PageProps) {
               locale={locale}
               copy={pickShopCheckoutCopy(t)}
               initialProducts={initialProducts}
+              orderHelpWhatsappUrl={whatsappUrl}
+              orderHelpEmail={displayEmail}
             />
           </div>
         </section>

@@ -49,17 +49,39 @@ export function BookingForm({ locale, initialSlots, defaultServiceId, noSlotsHin
 
   useEffect(() => {
     async function loadSlots() {
-      const response = await fetch(`/api/booking/slots?service=${selectedService}`);
-      if (!response.ok) {
-        setMessage("Could not load time slots. Please try again later.");
-        return;
+      try {
+        const response = await fetch(`/api/booking/slots?service=${selectedService}`);
+        if (!response.ok) {
+          setMessage("Could not load time slots. Please try again later.");
+          setSlots([]);
+          setSelectedSlot("");
+          return;
+        }
+        const raw = await response.text();
+        let data: { slots: Slot[] };
+        try {
+          data = raw ? (JSON.parse(raw) as { slots: Slot[] }) : { slots: [] };
+        } catch {
+          setMessage("Could not load time slots. Please try again later.");
+          setSlots([]);
+          setSelectedSlot("");
+          return;
+        }
+        setSlots(data.slots);
+        setSelectedSlot(data.slots[0]?.id ?? "");
+        setMessage("");
+      } catch {
+        setMessage(
+          locale === "zh-HK"
+            ? "無法載入時段（網絡或伺服器問題）。請稍後再試。"
+            : "Could not load time slots (network or server). Please try again.",
+        );
+        setSlots([]);
+        setSelectedSlot("");
       }
-      const data = (await response.json()) as { slots: Slot[] };
-      setSlots(data.slots);
-      setSelectedSlot(data.slots[0]?.id ?? "");
     }
     void loadSlots();
-  }, [selectedService]);
+  }, [selectedService, locale]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -75,27 +97,42 @@ export function BookingForm({ locale, initialSlots, defaultServiceId, noSlotsHin
     setIsSubmitting(true);
     setMessage("");
 
-    const response = await fetch("/api/booking", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Idempotency-Key": idempotencyKey,
-      },
-      body: JSON.stringify({
-        locale,
-        serviceId: selectedService,
-        slotId: selectedSlot,
-        customerName: name,
-        customerPhone: digitsOnly(phone),
-      }),
-    });
+    try {
+      const response = await fetch("/api/booking", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey,
+        },
+        body: JSON.stringify({
+          locale,
+          serviceId: selectedService,
+          slotId: selectedSlot,
+          customerName: name,
+          customerPhone: digitsOnly(phone),
+        }),
+      });
 
-    const data = (await response.json()) as { message: string };
-    setMessage(data.message);
-    if (response.ok) {
-      setIdempotencyKey(createIdempotencyKey());
+      const raw = await response.text();
+      let data: { message: string };
+      try {
+        data = raw ? (JSON.parse(raw) as { message: string }) : { message: "Unknown error." };
+      } catch {
+        data = { message: raw.slice(0, 200) || "Invalid response from server." };
+      }
+      setMessage(data.message);
+      if (response.ok) {
+        setIdempotencyKey(createIdempotencyKey());
+      }
+    } catch {
+      setMessage(
+        locale === "zh-HK"
+          ? "無法提交預約，請檢查網絡後再試。"
+          : "Could not submit booking. Check your connection and try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   }
 
   return (

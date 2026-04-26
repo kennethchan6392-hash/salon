@@ -1,11 +1,10 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import type { Locale } from "@/lib/i18n";
 import { getPriceListData } from "@/data/price-list";
 import type {
   PriceCompareSection,
   PriceDyeCutSection,
   PriceEventsSection,
-  PriceIntroListSection,
   PriceListSection,
   PriceMembershipSection,
   PriceNanoSection,
@@ -20,8 +19,9 @@ type Props = {
   disclaimer: string;
 };
 
+/** Light cards aligned with homepage story/services sections; tight padding to limit 留白 */
 const panel =
-  "rounded-2xl border border-white/10 bg-zinc-900/40 p-5 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.85)] backdrop-blur-sm sm:p-8";
+  "scroll-mt-20 rounded-xl border border-zinc-200/90 bg-white p-4 shadow-sm sm:scroll-mt-24 sm:p-5";
 
 function SectionTitle({
   children,
@@ -32,42 +32,10 @@ function SectionTitle({
 }) {
   return (
     <h3
-      className={`${sansClassName} border-l-2 border-amber-400/90 pl-3 text-sm font-semibold uppercase tracking-[0.18em] text-white`}
+      className={`${sansClassName} border-l-[3px] border-amber-500 pl-2.5 text-xs font-semibold uppercase tracking-[0.16em] text-zinc-900 sm:pl-3 sm:text-sm`}
     >
       {children}
     </h3>
-  );
-}
-
-function IntroListBlock({
-  s,
-  sansClassName,
-}: {
-  s: PriceIntroListSection;
-  sansClassName: string;
-}) {
-  return (
-    <div className={panel}>
-      <SectionTitle sansClassName={sansClassName}>{s.title}</SectionTitle>
-      {s.note ? (
-        <p className={`${sansClassName} mt-3 text-sm text-zinc-400`}>{s.note}</p>
-      ) : null}
-      <ul className={`${sansClassName} mt-6 divide-y divide-white/10 text-sm`}>
-        {s.rows.map((row) => (
-          <li key={row.name} className="flex flex-col gap-0.5 py-3.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
-            <span className="text-zinc-100">
-              {row.name}
-              {row.detail ? (
-                <span className="mt-0.5 block text-xs font-normal text-zinc-500 sm:mt-0 sm:inline sm:pl-2">
-                  {row.detail}
-                </span>
-              ) : null}
-            </span>
-            <span className="shrink-0 tabular-nums text-amber-200/95 sm:text-right">{row.price}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
   );
 }
 
@@ -79,28 +47,30 @@ function CompareTableBlock({
   sansClassName: string;
 }) {
   return (
-    <div className={panel}>
+    <div id={s.id} className={panel}>
       <SectionTitle sansClassName={sansClassName}>{s.title}</SectionTitle>
       {s.note ? (
-        <p className={`${sansClassName} mt-3 text-sm text-zinc-400`}>{s.note}</p>
+        <p className={`${sansClassName} mt-2 text-sm leading-snug text-zinc-600`}>{s.note}</p>
       ) : null}
-      <div className="mt-5 overflow-x-auto rounded-lg border border-white/10">
+      <div className="mt-3 overflow-x-auto rounded-lg border border-zinc-200/90">
         <table
-          className={`${sansClassName} w-full min-w-[520px] border-collapse text-left text-sm text-zinc-100`}
+          className={`${sansClassName} w-full min-w-[480px] border-collapse text-left text-sm text-zinc-900`}
         >
           <thead>
-            <tr className="border-b border-white/15 bg-zinc-950/80">
-              <th className="px-3 py-3 font-semibold text-zinc-200 sm:px-4">{""}</th>
-              <th className="px-3 py-3 font-semibold text-amber-200/90 sm:px-4">{s.colMember}</th>
-              <th className="px-3 py-3 font-semibold text-zinc-300 sm:px-4">{s.colGuest}</th>
+            <tr className="border-b border-zinc-200 bg-zinc-50">
+              <th className="px-2.5 py-2 font-semibold text-zinc-700 sm:px-3 sm:py-2.5">{""}</th>
+              <th className="px-2.5 py-2 font-semibold text-amber-900 sm:px-3 sm:py-2.5">{s.colMember}</th>
+              <th className="px-2.5 py-2 font-semibold text-zinc-700 sm:px-3 sm:py-2.5">{s.colGuest}</th>
             </tr>
           </thead>
           <tbody>
             {s.rows.map((row) => (
-              <tr key={row.service} className="border-b border-white/10 last:border-0">
-                <td className="px-3 py-3 align-top text-zinc-100 sm:px-4 sm:py-3.5">{row.service}</td>
-                <td className="px-3 py-3 align-top tabular-nums text-amber-100/95 sm:px-4">{row.member}</td>
-                <td className="px-3 py-3 align-top tabular-nums text-zinc-300 sm:px-4">{row.guest}</td>
+              <tr key={row.service} className="border-b border-zinc-100 last:border-0">
+                <td className="px-2.5 py-2 align-top text-zinc-800 sm:px-3 sm:py-2.5">{row.service}</td>
+                <td className="px-2.5 py-2 align-top tabular-nums font-medium text-amber-900 sm:px-3 sm:py-2.5">
+                  {row.member}
+                </td>
+                <td className="px-2.5 py-2 align-top tabular-nums text-zinc-700 sm:px-3 sm:py-2.5">{row.guest}</td>
               </tr>
             ))}
           </tbody>
@@ -118,20 +88,17 @@ function MembershipBlock({
   sansClassName: string;
 }) {
   return (
-    <div className={panel}>
+    <div id={s.id} className={panel}>
       <SectionTitle sansClassName={sansClassName}>{s.title}</SectionTitle>
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-3">
         {s.groups.map((g) => (
-          <div
-            key={g.heading}
-            className="rounded-xl border border-white/10 bg-black/30 px-4 py-4"
-          >
-            <p className={`${sansClassName} text-xs font-semibold uppercase tracking-wider text-amber-200/85`}>
+          <div key={g.heading} className="rounded-lg border border-zinc-200/90 bg-zinc-50/80 px-3 py-3">
+            <p className={`${sansClassName} text-[11px] font-semibold uppercase tracking-wider text-amber-900/90`}>
               {g.heading}
             </p>
-            <ul className={`${sansClassName} mt-3 space-y-2 text-sm text-zinc-200`}>
+            <ul className={`${sansClassName} mt-2 space-y-1.5 text-sm text-zinc-800`}>
               {g.lines.map((line) => (
-                <li key={line} className="tabular-nums">
+                <li key={line} className="tabular-nums leading-snug">
                   {line}
                 </li>
               ))}
@@ -140,7 +107,9 @@ function MembershipBlock({
         ))}
       </div>
       {s.footnotes.length > 0 ? (
-        <ul className={`${sansClassName} mt-6 space-y-2 border-t border-white/10 pt-5 text-xs leading-relaxed text-zinc-500`}>
+        <ul
+          className={`${sansClassName} mt-4 space-y-1.5 border-t border-zinc-200/90 pt-3 text-xs leading-relaxed text-zinc-500`}
+        >
           {s.footnotes.map((f) => (
             <li key={f}>· {f}</li>
           ))}
@@ -152,96 +121,105 @@ function MembershipBlock({
 
 function NanoBlock({ s, sansClassName }: { s: PriceNanoSection; sansClassName: string }) {
   return (
-    <div className={`${panel} ring-1 ring-amber-900/30`}>
+    <div id={s.id} className={`${panel} border-amber-200/70 bg-amber-50/20`}>
       <SectionTitle sansClassName={sansClassName}>{s.title}</SectionTitle>
-      <p className={`${sansClassName} mt-4 text-sm leading-relaxed text-zinc-300`}>{s.lead}</p>
-      <ul className="mt-6 space-y-2">
+      <p className={`${sansClassName} mt-2 text-sm leading-snug text-zinc-700`}>{s.lead}</p>
+      <ul className="mt-4 grid gap-2 sm:grid-cols-2">
         {s.bullets.map((b, i) => (
           <li
             key={i}
-            className={`${sansClassName} rounded-lg px-3 py-2.5 text-sm leading-relaxed sm:px-4 ${
-              i % 2 === 0
-                ? "bg-rose-950/35 text-rose-50/95"
-                : "bg-sky-950/35 text-sky-50/95"
+            className={`${sansClassName} rounded-lg px-3 py-2 text-sm leading-snug ${
+              i % 2 === 0 ? "bg-rose-50 text-rose-950/90" : "bg-sky-50 text-sky-950/90"
             }`}
           >
             {b}
           </li>
         ))}
       </ul>
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
         {s.priceBlocks.map((block) => (
-          <div key={block.subtitle} className="rounded-xl border border-white/10 bg-black/25 p-4">
-            <p className={`${sansClassName} text-xs font-semibold uppercase tracking-wider text-zinc-400`}>
+          <div key={block.subtitle} className="rounded-lg border border-zinc-200/90 bg-white p-3">
+            <p className={`${sansClassName} text-[11px] font-semibold uppercase tracking-wider text-zinc-600`}>
               {block.subtitle}
             </p>
-            <ul className={`${sansClassName} mt-3 space-y-2 text-sm`}>
+            <ul className={`${sansClassName} mt-2 space-y-1 text-sm`}>
               {block.rows.map((r) => (
-                <li key={r.label} className="flex justify-between gap-3 border-b border-white/5 py-2 last:border-0">
-                  <span className="text-zinc-200">{r.label}</span>
-                  <span className="shrink-0 tabular-nums text-amber-200/90">{r.value}</span>
+                <li
+                  key={r.label}
+                  className="flex justify-between gap-2 border-b border-zinc-100 py-1.5 last:border-0"
+                >
+                  <span className="text-zinc-800">{r.label}</span>
+                  <span className="shrink-0 tabular-nums font-medium text-amber-900">{r.value}</span>
                 </li>
               ))}
             </ul>
           </div>
         ))}
       </div>
-      <div className="mt-6 flex flex-wrap gap-3">
+      <div className="mt-4 flex flex-wrap gap-2">
         {s.courseCards.map((c) => (
           <div
             key={c.label}
-            className="min-w-[10rem] flex-1 rounded-xl border border-amber-500/25 bg-amber-950/20 px-4 py-3"
+            className="min-w-[9rem] flex-1 rounded-lg border border-amber-200/90 bg-amber-50/80 px-3 py-2"
           >
-            <p className={`${sansClassName} text-xs text-amber-200/80`}>{c.label}</p>
-            <p className={`${sansClassName} mt-1 text-lg font-semibold tabular-nums text-white`}>{c.value}</p>
+            <p className={`${sansClassName} text-[11px] text-amber-950/80`}>{c.label}</p>
+            <p className={`${sansClassName} mt-0.5 text-base font-semibold tabular-nums text-zinc-900`}>{c.value}</p>
           </div>
         ))}
       </div>
-      <p className={`${sansClassName} mt-6 text-sm font-medium text-emerald-300/90`}>{s.promoLine}</p>
-      <p className={`${sansClassName} mt-2 text-sm text-zinc-400`}>{s.contactLine}</p>
+      <p className={`${sansClassName} mt-4 text-sm font-medium text-emerald-800`}>{s.promoLine}</p>
+      <p className={`${sansClassName} mt-1 text-sm text-zinc-600`}>{s.contactLine}</p>
     </div>
   );
 }
 
 function DyeCutBlock({ s, sansClassName }: { s: PriceDyeCutSection; sansClassName: string }) {
+  const colMember = s.blocks[0]?.colMember ?? "";
+  const colGuest = s.blocks[0]?.colGuest ?? "";
   return (
-    <div className={panel}>
+    <div id={s.id} className={panel}>
       <SectionTitle sansClassName={sansClassName}>{s.title}</SectionTitle>
       {s.note ? (
-        <p className={`${sansClassName} mt-3 text-sm text-amber-200/80`}>{s.note}</p>
+        <p className={`${sansClassName} mt-2 text-sm font-medium text-amber-900/90`}>{s.note}</p>
       ) : null}
-      <div className="mt-6 space-y-10">
-        {s.blocks.map((block) => (
-          <div key={block.subtitle ?? "block"}>
-            {block.subtitle ? (
-              <p className={`${sansClassName} text-xs font-semibold uppercase tracking-wider text-zinc-400`}>
-                {block.subtitle}
-              </p>
-            ) : null}
-            <div className="mt-3 overflow-x-auto rounded-lg border border-white/10">
-              <table
-                className={`${sansClassName} w-full min-w-[480px] border-collapse text-left text-sm text-zinc-100`}
-              >
-                <thead>
-                  <tr className="border-b border-white/15 bg-zinc-950/80">
-                    <th className="px-3 py-2.5 sm:px-4">{""}</th>
-                    <th className="px-3 py-2.5 text-amber-200/90 sm:px-4">{block.colMember}</th>
-                    <th className="px-3 py-2.5 text-zinc-300 sm:px-4">{block.colGuest}</th>
+      <div className="mt-3 overflow-x-auto rounded-lg border border-zinc-200/90">
+        <table
+          className={`${sansClassName} w-full min-w-[480px] border-collapse text-left text-sm text-zinc-900`}
+        >
+          <thead>
+            <tr className="border-b border-zinc-200 bg-zinc-50">
+              <th className="px-2.5 py-2 sm:px-3 sm:py-2.5">{""}</th>
+              <th className="px-2.5 py-2 font-semibold text-amber-900 sm:px-3 sm:py-2.5">{colMember}</th>
+              <th className="px-2.5 py-2 font-semibold text-zinc-700 sm:px-3 sm:py-2.5">{colGuest}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {s.blocks.map((block) => (
+              <Fragment key={block.subtitle ?? "block"}>
+                <tr className="border-b border-zinc-200 bg-zinc-100/90">
+                  <td
+                    colSpan={3}
+                    className={`${sansClassName} px-2.5 py-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-700 sm:px-3`}
+                  >
+                    {block.subtitle ?? ""}
+                  </td>
+                </tr>
+                {block.rows.map((row) => (
+                  <tr
+                    key={`${block.subtitle ?? ""}-${row.label}`}
+                    className="border-b border-zinc-100 last:border-0"
+                  >
+                    <td className="px-2.5 py-2 align-top text-zinc-800 sm:px-3 sm:py-2">{row.label}</td>
+                    <td className="px-2.5 py-2 align-top tabular-nums font-medium text-amber-900 sm:px-3 sm:py-2">
+                      {row.member}
+                    </td>
+                    <td className="px-2.5 py-2 align-top tabular-nums text-zinc-700 sm:px-3 sm:py-2">{row.guest}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {block.rows.map((row) => (
-                    <tr key={row.label} className="border-b border-white/10 last:border-0">
-                      <td className="px-3 py-2.5 align-top sm:px-4 sm:py-3">{row.label}</td>
-                      <td className="px-3 py-2.5 align-top tabular-nums text-amber-100/95 sm:px-4">{row.member}</td>
-                      <td className="px-3 py-2.5 align-top tabular-nums text-zinc-300 sm:px-4">{row.guest}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ))}
+                ))}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -249,21 +227,24 @@ function DyeCutBlock({ s, sansClassName }: { s: PriceDyeCutSection; sansClassNam
 
 function EventsBlock({ s, sansClassName }: { s: PriceEventsSection; sansClassName: string }) {
   return (
-    <div className={panel}>
+    <div id={s.id} className={panel}>
       <SectionTitle sansClassName={sansClassName}>{s.title}</SectionTitle>
-      <ul className={`${sansClassName} mt-6 divide-y divide-white/10 text-sm`}>
-        {s.rows.map((row) => (
-          <li
-            key={row.name}
-            className="flex flex-col gap-0.5 py-3.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"
-          >
-            <span className="text-zinc-100">{row.name}</span>
-            <span className="shrink-0 tabular-nums text-amber-200/95 sm:text-right">{row.price}</span>
-          </li>
-        ))}
-      </ul>
+      <div className="mt-3 overflow-x-auto rounded-lg border border-zinc-200/90">
+        <table className={`${sansClassName} w-full min-w-[320px] border-collapse text-left text-sm`}>
+          <tbody>
+            {s.rows.map((row) => (
+              <tr key={row.name} className="border-b border-zinc-100 last:border-0">
+                <td className="max-w-[70%] py-2 pr-4 align-top text-zinc-900 sm:px-3 sm:py-2.5">{row.name}</td>
+                <td className="whitespace-nowrap py-2 align-top tabular-nums font-medium text-amber-900 sm:px-3 sm:py-2.5">
+                  {row.price}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {s.addon ? (
-        <p className={`${sansClassName} mt-4 border-t border-white/10 pt-4 text-sm text-zinc-400`}>{s.addon}</p>
+        <p className={`${sansClassName} mt-3 border-t border-zinc-200/90 pt-3 text-sm text-zinc-600`}>{s.addon}</p>
       ) : null}
     </div>
   );
@@ -271,8 +252,6 @@ function EventsBlock({ s, sansClassName }: { s: PriceEventsSection; sansClassNam
 
 function renderSection(s: PriceListSection, sansClassName: string): ReactNode {
   switch (s.kind) {
-    case "intro-list":
-      return <IntroListBlock key={s.id} s={s} sansClassName={sansClassName} />;
     case "compare-table":
       return <CompareTableBlock key={s.id} s={s} sansClassName={sansClassName} />;
     case "membership":
@@ -293,23 +272,14 @@ function renderSection(s: PriceListSection, sansClassName: string): ReactNode {
 export function PriceListSection(p: Props) {
   const data = getPriceListData(p.locale);
   return (
-    <section
-      id="price-list"
-      className="border-b border-white/10 bg-gradient-to-b from-black via-zinc-950 to-black text-white"
-    >
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-        <h2
-          className={`${p.displayClassName} text-3xl font-semibold text-white md:text-4xl`}
-        >
+    <section id="price-list" className="border-b border-zinc-200/80 bg-white text-zinc-900">
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+        <h2 className={`${p.displayClassName} text-3xl font-semibold text-zinc-900 md:text-4xl`}>
           {p.priceListTitle}
         </h2>
-        <p className={`${p.sansClassName} mt-4 max-w-2xl text-sm leading-relaxed text-zinc-400`}>
-          {p.intro}
-        </p>
-        <p className={`${p.sansClassName} mt-2 max-w-2xl text-xs leading-relaxed text-zinc-500`}>
-          {p.disclaimer}
-        </p>
-        <div className="mt-12 flex flex-col gap-10 sm:gap-12">
+        <p className={`${p.sansClassName} mt-3 max-w-3xl text-sm leading-snug text-zinc-600`}>{p.intro}</p>
+        <p className={`${p.sansClassName} mt-1.5 max-w-3xl text-xs leading-snug text-zinc-500`}>{p.disclaimer}</p>
+        <div className="mt-6 flex flex-col gap-5 sm:mt-8 sm:gap-6">
           {data.sections.map((s) => renderSection(s, p.sansClassName))}
         </div>
       </div>

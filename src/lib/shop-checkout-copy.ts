@@ -22,6 +22,9 @@ export type ShopCheckoutCopy = Pick<
   | "shopSortPriceDesc"
   | "shopAddToCart"
   | "shopCheckoutTitle"
+  | "shopStaticCheckoutNote"
+  | "shopWhatsappOrder"
+  | "shopMailOrder"
   | "catShampoo"
   | "catConditioner"
   | "catTreatment"
@@ -63,6 +66,9 @@ export function pickShopCheckoutCopy(t: Messages): ShopCheckoutCopy {
     shopSortPriceDesc: t.shopSortPriceDesc,
     shopAddToCart: t.shopAddToCart,
     shopCheckoutTitle: t.shopCheckoutTitle,
+    shopStaticCheckoutNote: t.shopStaticCheckoutNote,
+    shopWhatsappOrder: t.shopWhatsappOrder,
+    shopMailOrder: t.shopMailOrder,
     catShampoo: t.catShampoo,
     catConditioner: t.catConditioner,
     catTreatment: t.catTreatment,
